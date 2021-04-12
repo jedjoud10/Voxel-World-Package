@@ -32,21 +32,23 @@ float Density(float3 p)
 {
     float cellularDensity = 0;
     float maxv = 0;
-    for (int i = 0; i < 4 * quality; i++)
+    for (int i = 0; i < 6 * quality; i++)
     {
         cellularDensity += (1 - cellular(p * pow(2, i) * 0.002)) * pow(0.5, i);
         maxv += pow(0.5, i);
     }
     cellularDensity /= maxv;
-    cellularDensity *= 320;
-    //return p.y;
-    return opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), cellularDensity + p.y - 320);
-    return opSmoothUnion(cellularDensity + p.y - 320, p.y - 150, 60);
+    cellularDensity *= 420;
+    //return color * 20 + p.y;
+    //return opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), cellularDensity + p.y - 320);
+    float sphere = sdSphere(p, 5000);
+    return opSmoothUnion(cellularDensity + sphere, sdSphere(p, 4850), 60);
+    return cellularDensity + sphere;
 }
 //The color function
 float3 Color(float3 p, float3 lp, float3 n)
 {
-    float3 color = animeTexture[(p.xz + 500)*2];
+    float3 color = animeTexture[(p.xz + 1024)*0.58];
     color = n;
     return color;
 }

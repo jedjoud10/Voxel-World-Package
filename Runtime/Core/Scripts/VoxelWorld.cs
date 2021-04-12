@@ -45,7 +45,7 @@ public class VoxelWorld : MonoBehaviour
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32- or 64
+    public const int resolution = 64;//The resolution of each chunk> Can either be 8-16-32- or 64
     private readonly int[,] mcTable = new int[256, 16]{
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
     { 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
@@ -438,7 +438,7 @@ public class VoxelWorld : MonoBehaviour
         chunksUpdating = new HashSet<Chunk>();
 
         //Setup first time compute shader stuff
-        RenderTexture rt = new RenderTexture(3915, 3072, 0);
+        RenderTexture rt = new RenderTexture(1024, 1024, 0);
         rt.enableRandomWrite = true;
         RenderTexture.active = rt;
         rt.wrapMode = TextureWrapMode.Clamp;
@@ -603,7 +603,6 @@ public class VoxelWorld : MonoBehaviour
                     if (localVoxels[i + resolution * resolution + resolution].density < isolevel) mcCase |= 32;
                     if (localVoxels[i + resolution * resolution + resolution + 1].density < isolevel) mcCase |= 64;
                     if (localVoxels[i + resolution * resolution + 1].density < isolevel) mcCase |= 128;
-
                     //Every triangle in this marching cubes case
                     for (int t = 0; t < 15; t++)
                     {
