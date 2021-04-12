@@ -41,6 +41,7 @@ public class VoxelWorld : MonoBehaviour
 
     //GPU Stuff
     private ComputeBuffer buffer;
+    Voxel[] voxels = new Voxel[(resolution) * (resolution) * (resolution)];
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
@@ -702,7 +703,6 @@ public class VoxelWorld : MonoBehaviour
                         Voxel a = localVoxels[i + edgesCornersY[e, 0]];
                         Voxel b = localVoxels[i + edgesCornersY[e, 1]];
                         float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        //lerpValue = 0.5f;
                         edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesY[e, 0], edgesY[e, 1], lerpValue) + new Vector3(x, slicePoint, z)) * (node.chunkSize / (float)(resolution - 1)));
                     }
                     SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
@@ -766,8 +766,6 @@ public class VoxelWorld : MonoBehaviour
                 case 5:
                     AddTriangle(cornerVoxels[0], edgeMiddleVoxels[0], edgeMiddleVoxels[3], flip);
                     AddTriangle(cornerVoxels[2], edgeMiddleVoxels[1], edgeMiddleVoxels[2], flip);
-                    AddTriangle(edgeMiddleVoxels[0], edgeMiddleVoxels[3], edgeMiddleVoxels[2], flip);
-                    AddTriangle(edgeMiddleVoxels[1], edgeMiddleVoxels[2], edgeMiddleVoxels[0], flip);
                     break;
                 case 6:
                     AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[1], cornerVoxels[2], flip);
@@ -786,10 +784,8 @@ public class VoxelWorld : MonoBehaviour
                     AddTriangle(edgeMiddleVoxels[3], cornerVoxels[0], cornerVoxels[1], flip);
                     break;
                 case 10:
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[0], edgeMiddleVoxels[1], flip);
-                    AddTriangle(cornerVoxels[3], edgeMiddleVoxels[2], edgeMiddleVoxels[3], flip);
-                    AddTriangle(edgeMiddleVoxels[0], edgeMiddleVoxels[1], edgeMiddleVoxels[3], flip);
-                    AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[1], edgeMiddleVoxels[2], flip);
+                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[1], edgeMiddleVoxels[0], flip);
+                    AddTriangle(cornerVoxels[3], edgeMiddleVoxels[3], edgeMiddleVoxels[2], flip);
                     break;
                 case 11:
                     AddTriangle(cornerVoxels[1], edgeMiddleVoxels[1], cornerVoxels[0], flip);
@@ -811,7 +807,7 @@ public class VoxelWorld : MonoBehaviour
                     AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[0], cornerVoxels[2], flip);
                     break;
                 case 15:
-                    if ((cornerVoxels[0].density + cornerVoxels[1].density + cornerVoxels[2].density + cornerVoxels[3].density) / 4 > -10)
+                    if ((cornerVoxels[0].density + cornerVoxels[1].density + cornerVoxels[2].density + cornerVoxels[3].density) / 4 > -chunk.octreeNodeSize / 15)
                     {
                         AddTriangle(cornerVoxels[0], cornerVoxels[1], cornerVoxels[2], flip);
                         AddTriangle(cornerVoxels[2], cornerVoxels[3], cornerVoxels[0], flip);
@@ -867,10 +863,9 @@ public class VoxelWorld : MonoBehaviour
         generationShader.SetBuffer(0, "buffer", buffer);
         generationShader.SetInt("resolution", resolution);
         generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.5f));
-        generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
-        Voxel[] voxels = new Voxel[(resolution) * (resolution) * (resolution)];
+        generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);        
         buffer.GetData(voxels);
-        ThreadPool.QueueUserWorkItem(MarchingCubesWithSkirtsMultithreaded, new object[3] { voxels, node, chunk });
+        //MarchingCubesWithSkirtsMultithreaded(new object[3] { voxels, node, chunk });
     }
     //If we already find a threaded mesh in the threadedMesh list, overwrite it
     private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)

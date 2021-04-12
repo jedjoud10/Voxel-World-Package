@@ -38,14 +38,15 @@ float Density(float3 p)
     }
     cellularDensity /= maxv;
     cellularDensity *= 320;
+    return p.y + snoise(p * 0.03) * 40;
     return opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), cellularDensity + p.y - 320);
     return opSmoothUnion(cellularDensity + p.y - 320, p.y - 150, 60);
 }
 //The color function
 float3 Color(float3 p, float3 lp, float3 n)
 {
-    float3 color = animeTexture[p.xz + 500];
-    color = n;
+    float3 color = animeTexture[(p.xz + 500)*2];
+    color *= n;
     return color;
 }
 //The metallic function
