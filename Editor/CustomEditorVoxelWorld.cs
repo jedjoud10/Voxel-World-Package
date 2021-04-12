@@ -10,7 +10,7 @@ public class CustomEditorVoxelWorld : Editor
         base.OnInspectorGUI();
         VoxelWorld voxelWorld = (VoxelWorld)target;
         //Caclulate the globalWorldSize
-        float globalWorldSize = Mathf.Pow(2, voxelWorld.maxHierarchyIndex) * (VoxelWorld.resolution-1) * VoxelWorld.voxelSize;
+        float globalWorldSize = Mathf.Pow(2, voxelWorld.maxHierarchyIndex) * (VoxelWorld.resolution-3) * VoxelWorld.voxelSize;
         string sign = "m";
         //When the terrain is in km
         if (globalWorldSize > 1000)

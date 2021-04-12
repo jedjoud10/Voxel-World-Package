@@ -38,10 +38,10 @@ public class VoxelWorld : MonoBehaviour
     public Dictionary<OctreeNode, Chunk> chunks;
     public Octree octree;
     public VoxelEditsManager voxelEditsManager;
+    public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
     //GPU Stuff
-    private ComputeBuffer buffer;
-    Voxel[] voxels = new Voxel[(resolution) * (resolution) * (resolution)];
+    private ComputeBuffer buffer;    
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
@@ -417,6 +417,14 @@ public class VoxelWorld : MonoBehaviour
     {
         return (position.z * resolution * resolution) + (position.y * resolution) + position.x;
     }
+    public static Vector3 UnflattenIndex(int index)
+    {
+        int z = index / ((resolution) * (resolution));
+        index -= (z * (resolution) * (resolution));
+        int y = index / (resolution);
+        int x = index % (resolution);
+        return new Vector3(x, y, z);
+    }
     #endregion
     // Start is called before the first frame update
     void Start()
@@ -436,7 +444,15 @@ public class VoxelWorld : MonoBehaviour
         rt.wrapMode = TextureWrapMode.Clamp;
         Graphics.Blit(texture, rt);
         generationShader.SetTexture(0, "animeTexture", rt);
+        generationShader.SetTexture(1, "animeTexture", rt);
+
+        generationShader.SetInt("resolution", resolution);
+        generationShader.SetVector("scale", scale);
+
         buffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
+
+        generationShader.SetBuffer(0, "buffer", buffer);
+        generationShader.SetBuffer(1, "buffer", buffer);
     }
     private void OnDestroy()
     {
@@ -551,15 +567,6 @@ public class VoxelWorld : MonoBehaviour
             return newChunk;
         }
     }
-    //Turn an index into a 3d position
-    public static Vector3 UnflattenIndex(int index)
-    {
-        int z = index / ((resolution) * (resolution));
-        index -= (z * (resolution) * (resolution));
-        int y = index / (resolution);
-        int x = index % (resolution);
-        return new Vector3(x, y, z);
-    }
     //Create the mesh of the chunk in another thread
     private void MarchingCubesWithSkirtsMultithreaded(object state)
     {
@@ -578,14 +585,14 @@ public class VoxelWorld : MonoBehaviour
         List<int> map = new List<int>();
         Dictionary<Vector3, int> hashmap = new Dictionary<Vector3, int>();
         int vertexCount = 0;
-        for (int z = 0, i; z < resolution - 1; z++)
+        for (int z = 0, i; z < resolution - 3; z++)
         {
-            for (int y = 0; y < resolution - 1; y++)
+            for (int y = 0; y < resolution - 3; y++)
             {
-                for (int x = 0; x < resolution - 1; x++)
+                for (int x = 0; x < resolution - 3; x++)
                 {
                     Vector3 pos = new Vector3(x, y, z);
-                    i = FlattenIndex(new Vector3Int(x, y, z));
+                    i = FlattenIndex(new Vector3Int(x+1, y+1, z+1));
                     //Indexing
                     int mcCase = 0;
                     if (localVoxels[i + 0].density < isolevel) mcCase |= 1;
@@ -605,7 +612,7 @@ public class VoxelWorld : MonoBehaviour
                         {
                             //Find the zero-crossing point
                             float lerpValue = Mathf.InverseLerp(localVoxels[i + edgesToCornerIndices[tri]].density, localVoxels[i + edgesToCornerIndices2[tri]].density, isolevel);
-                            Vector3 vertex = (Vector3.Lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (node.chunkSize / (float)(resolution - 1));
+                            Vector3 vertex = (Vector3.Lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (node.chunkSize / (float)(resolution - 3));
                             if (!hashmap.ContainsKey(vertex))
                             {
                                 //First time we generate this vertex
@@ -634,23 +641,25 @@ public class VoxelWorld : MonoBehaviour
             }
         }
         //Skirts 
-        //X Axis        
+
+        //X Axis
+        float reductionFactorChunkScaled = (node.chunkSize / (float)(resolution - 3));
         CreateSkirtX(0, true);
-        CreateSkirtX(resolution - 1, false);
+        CreateSkirtX(resolution - 3, false);
         //Y Axis
         CreateSkirtY(0, false);
-        CreateSkirtY(resolution - 1, true);
+        CreateSkirtY(resolution - 3, true);
         //Z Axis
         CreateSkirtZ(0, false);
-        CreateSkirtZ(resolution - 1, true);
-
+        CreateSkirtZ(resolution - 3, true);
+        
         void CreateSkirtX(int slicePoint, bool flip)
         {
-            for (int y = 0; y < resolution - 1; y++)
+            for (int y = 0; y < resolution - 3; y++)
             {
-                for (int z = 0; z < resolution - 1; z++)
+                for (int z = 0; z < resolution - 3; z++)
                 {
-                    int i = FlattenIndex(new Vector3Int(slicePoint, y, z));
+                    int i = FlattenIndex(new Vector3Int(slicePoint+1, y+1, z+1));
                     //Indexing
                     int msCase = 0;
                     if (localVoxels[i].density < 0) msCase |= 1;
@@ -659,10 +668,10 @@ public class VoxelWorld : MonoBehaviour
                     if (localVoxels[i + resolution].density < 0) msCase |= 8;
                     //Get the corners
                     SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(slicePoint, y, z) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(slicePoint, y + 1, z) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + resolution * resolution], new Vector3(slicePoint, y + 1, z + 1) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(slicePoint, y, z + 1) * (node.chunkSize / (float)(resolution - 1)));
+                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(slicePoint, y, z) * reductionFactorChunkScaled);
+                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(slicePoint, y + 1, z) * reductionFactorChunkScaled);
+                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + resolution * resolution], new Vector3(slicePoint, y + 1, z + 1) * reductionFactorChunkScaled);
+                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(slicePoint, y, z + 1) * reductionFactorChunkScaled);
                     //Get each edge's skirtVoxel
                     SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
                     for (int e = 0; e < 4; e++)
@@ -670,7 +679,7 @@ public class VoxelWorld : MonoBehaviour
                         Voxel a = localVoxels[i + edgesCornersX[e, 0]];
                         Voxel b = localVoxels[i + edgesCornersX[e, 1]];
                         float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesX[e, 0], edgesX[e, 1], lerpValue) + new Vector3(slicePoint, y, z)) * (node.chunkSize / (float)(resolution - 1)));
+                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesX[e, 0], edgesX[e, 1], lerpValue) + new Vector3(slicePoint, y, z)) * (reductionFactorChunkScaled));
                     }
                     SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
                 }
@@ -678,11 +687,11 @@ public class VoxelWorld : MonoBehaviour
         }
         void CreateSkirtY(int slicePoint, bool flip)
         {
-            for (int z = 0; z < resolution - 1; z++)
+            for (int z = 0; z < resolution - 3; z++)
             {
-                for (int x = 0; x < resolution - 1; x++)
+                for (int x = 0; x < resolution - 3; x++)
                 {
-                    int i = FlattenIndex(new Vector3Int(x, slicePoint, z));
+                    int i = FlattenIndex(new Vector3Int(x+1, slicePoint+1, z+1));
                     //Indexing
                     int msCase = 0;
                     if (localVoxels[i].density < 0) msCase |= 1;
@@ -691,10 +700,10 @@ public class VoxelWorld : MonoBehaviour
                     if (localVoxels[i + 1].density < 0) msCase |= 8;
                     //Get the corners
                     SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, slicePoint, z) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(x + 1, slicePoint, z) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution * resolution + 1], new Vector3(x + 1, slicePoint, z + 1) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x, slicePoint, z + 1) * (node.chunkSize / (float)(resolution - 1)));
+                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, slicePoint, z) * reductionFactorChunkScaled);
+                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(x + 1, slicePoint, z) * reductionFactorChunkScaled);
+                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution * resolution + 1], new Vector3(x + 1, slicePoint, z + 1) * reductionFactorChunkScaled);
+                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x, slicePoint, z + 1) * reductionFactorChunkScaled);
                     //Get each edge's skirtVoxel
                     SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
                     //Run on each edge
@@ -703,7 +712,7 @@ public class VoxelWorld : MonoBehaviour
                         Voxel a = localVoxels[i + edgesCornersY[e, 0]];
                         Voxel b = localVoxels[i + edgesCornersY[e, 1]];
                         float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesY[e, 0], edgesY[e, 1], lerpValue) + new Vector3(x, slicePoint, z)) * (node.chunkSize / (float)(resolution - 1)));
+                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesY[e, 0], edgesY[e, 1], lerpValue) + new Vector3(x, slicePoint, z)) * reductionFactorChunkScaled);
                     }
                     SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
                 }
@@ -711,11 +720,11 @@ public class VoxelWorld : MonoBehaviour
         }
         void CreateSkirtZ(int slicePoint, bool flip)
         {
-            for (int y = 0; y < resolution - 1; y++)
+            for (int y = 0; y < resolution - 3; y++)
             {
-                for (int x = 0; x < resolution - 1; x++)
+                for (int x = 0; x < resolution - 3; x++)
                 {
-                    int i = FlattenIndex(new Vector3Int(x, y, slicePoint));
+                    int i = FlattenIndex(new Vector3Int(x+1, y+1, slicePoint+1));
                     //Indexing
                     int msCase = 0;
                     if (localVoxels[i].density < 0) msCase |= 1;
@@ -724,10 +733,10 @@ public class VoxelWorld : MonoBehaviour
                     if (localVoxels[i + resolution].density < 0) msCase |= 8;
                     //Get the corners
                     SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, y, slicePoint) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(x, y + 1, slicePoint) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + 1], new Vector3(x + 1, y + 1, slicePoint) * (node.chunkSize / (float)(resolution - 1)));
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x + 1, y, slicePoint) * (node.chunkSize / (float)(resolution - 1)));
+                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, y, slicePoint) * reductionFactorChunkScaled);
+                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(x, y + 1, slicePoint) * reductionFactorChunkScaled);
+                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + 1], new Vector3(x + 1, y + 1, slicePoint) * reductionFactorChunkScaled);
+                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x + 1, y, slicePoint) * reductionFactorChunkScaled);
                     //Get each edge's skirtVoxel
                     SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
                     //Run on each edge
@@ -736,7 +745,7 @@ public class VoxelWorld : MonoBehaviour
                         Voxel a = localVoxels[i + edgesCornersZ[e, 0]];
                         Voxel b = localVoxels[i + edgesCornersZ[e, 1]];
                         float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesZ[e, 0], edgesZ[e, 1], lerpValue) + new Vector3(x, y, slicePoint)) * (node.chunkSize / (float)(resolution - 1)));
+                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesZ[e, 0], edgesZ[e, 1], lerpValue) + new Vector3(x, y, slicePoint)) * reductionFactorChunkScaled);
                     }
                     SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
                 }
@@ -827,7 +836,6 @@ public class VoxelWorld : MonoBehaviour
             triangles.Add(map[vertexCount - 3]);
             triangles.Add(map[vertexCount - 2]);
             triangles.Add(map[vertexCount - 1]);
-
         }
         //Add a single vertex to the mesh (Also used for skirts)
         void TryAddSkirtVertex(SkirtVoxel skirtVoxel)
@@ -857,15 +865,15 @@ public class VoxelWorld : MonoBehaviour
     public void GenerateMesh(Chunk chunk, OctreeNode node)
     {
         //1. Generate the data (density, rgb color, roughness, metallic) for the meshing        
-        generationShader.SetVector("offset", offset + node.chunkPosition);
-        generationShader.SetVector("scale", scale);
-        generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 1));
-        generationShader.SetBuffer(0, "buffer", buffer);
-        generationShader.SetInt("resolution", resolution);
-        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.5f));
-        generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);        
+        Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
+        generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
+        generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
+        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
+        generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
+        generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
+        Voxel[] voxels = new Voxel[(resolution) * (resolution) * (resolution)];
         buffer.GetData(voxels);
-        //MarchingCubesWithSkirtsMultithreaded(new object[3] { voxels, node, chunk });
+        ThreadPool.QueueUserWorkItem(MarchingCubesWithSkirtsMultithreaded, new object[3] { voxels, node, chunk });
     }
     //If we already find a threaded mesh in the threadedMesh list, overwrite it
     private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)

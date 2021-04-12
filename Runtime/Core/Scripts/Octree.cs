@@ -49,7 +49,7 @@ public class Octree
         Dictionary<OctreeNode, OctreeNodeChildrenCarrier> localChildrenCarriers = new Dictionary<OctreeNode, OctreeNodeChildrenCarrier>();
         Vector3 cameraPos = (Vector3)(((object[])state)[0]);
         //Setup root octree
-        float reducingFactor = ((float)(VoxelWorld.resolution - 1) / (float)(VoxelWorld.resolution));
+        float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
         OctreeNode rootOctree = new OctreeNode();
         rootOctree.hierarchyIndex = 0;
         rootOctree.size = Mathf.RoundToInt(Mathf.Pow(2, maxHierarchyIndex)) * VoxelWorld.resolution;

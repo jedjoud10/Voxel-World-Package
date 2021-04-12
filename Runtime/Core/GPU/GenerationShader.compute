@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel VoxelMain
+#pragma kernel VoxelNormal
 #include "./GenerationShaders/Others/SDFFunctions.cginc"
 #include "./GenerationShaders/Others/noises/base.cginc"
 #include "./GenerationShaders/Others/noises/cellular3D.cginc"
@@ -31,14 +32,14 @@ float Density(float3 p)
 {
     float cellularDensity = 0;
     float maxv = 0;
-    for (int i = 0; i < 1 * quality; i++)
+    for (int i = 0; i < 4 * quality; i++)
     {
         cellularDensity += (1 - cellular(p * pow(2, i) * 0.002)) * pow(0.5, i);
         maxv += pow(0.5, i);
     }
     cellularDensity /= maxv;
     cellularDensity *= 320;
-    return p.y + snoise(p * 0.03) * 40;
+    //return p.y;
     return opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), cellularDensity + p.y - 320);
     return opSmoothUnion(cellularDensity + p.y - 320, p.y - 150, 60);
 }
@@ -46,7 +47,7 @@ float Density(float3 p)
 float3 Color(float3 p, float3 lp, float3 n)
 {
     float3 color = animeTexture[(p.xz + 500)*2];
-    color *= n;
+    color = n;
     return color;
 }
 //The metallic function
@@ -59,7 +60,8 @@ float Smoothness(float3 p, float3 n)
 {
     return 0;
 }
-#define NORMAL_EPSILON 0.1
+int flt(uint3 pos) { return (pos.z * resolution * resolution) + (pos.y * resolution) + pos.x; }
+
 [numthreads(8,8,8)]
 void VoxelMain(uint3 id : SV_DispatchThreadID)
 {
@@ -67,10 +69,28 @@ void VoxelMain(uint3 id : SV_DispatchThreadID)
     
     Voxel voxel;
     voxel.density = Density(p);
-    float3 normal = normalize(float3(Density(p + float3(NORMAL_EPSILON, 0, 0)) - Density(p - float3(NORMAL_EPSILON, 0, 0)), Density(p + float3(0, NORMAL_EPSILON, 0)) - Density(p - float3(0, NORMAL_EPSILON, 0)), Density(p + float3(0, 0, NORMAL_EPSILON)) - Density(p - float3(0, 0, NORMAL_EPSILON))));
+    voxel.normal = 1;
+    voxel.color = 1;
+    voxel.metallic = 0;
+    voxel.smoothness = 0;
+    buffer[(id.z * resolution * resolution) + (id.y * resolution) + id.x] = voxel;
+}
+
+[numthreads(8, 8, 8)]
+void VoxelNormal(uint3 id : SV_DispatchThreadID)
+{
+    float3 p = (id * chunkScaling + offset) * scale;
+    int index = flt(id);
+    Voxel voxel = buffer[index];
+    float3 normal = 0;
+    normal.x = buffer[flt(uint3(1, 0, 0) + id)].density - buffer[flt(uint3(-1, 0, 0) + id)].density;
+    normal.y = buffer[flt(uint3(0, 1, 0) + id)].density - buffer[flt(uint3(0, -1, 0) + id)].density;
+    normal.z = buffer[flt(uint3(0, 0, 1) + id)].density - buffer[flt(uint3(0, 0, -1) + id)].density;
+    normal = normalize(normal);
+
     voxel.normal = normal;
-    voxel.color = Color(p, id, normal);
+    voxel.color = Color(p, id / (float)resolution, normal);
     voxel.metallic = Metallic(p, normal);
     voxel.smoothness = Smoothness(p, normal);
-    buffer[(id.z * resolution * resolution) + (id.y * resolution) + id.x] = voxel;
+    buffer[index] = voxel;
 }
