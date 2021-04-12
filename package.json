@@ -1,0 +1,17 @@
+{
+  "name": "com.jedjoud.voxelworld",
+  "version": "1.0.0",
+  "displayName": "Voxel World",
+  "description": "A voxel package to create endless worlds!",
+  "unity": "2020.3",
+  "keywords": [
+    "voxel",
+    "terrain"
+  ],
+  "author": {
+    "name": "Jed Jribi",
+    "email": "jribijed6@gmail.com",
+    "url": ""
+  },
+  "type": "library"
+}

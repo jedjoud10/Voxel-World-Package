@@ -1,0 +1,75 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VoxelMain
+#include "./GenerationShaders/Others/SDFFunctions.cginc"
+#include "./GenerationShaders/Others/noises/base.cginc"
+#include "./GenerationShaders/Others/noises/cellular3D.cginc"
+#include "./GenerationShaders/Others/noises/noise3D.cginc"
+#include "./GenerationShaders/Others/noises/erosionnoise.cginc"
+
+//Base values
+float3 offset;
+float3 scale;
+float chunkScaling;
+int resolution;
+float quality;
+
+//Data stuff
+struct Voxel 
+{
+    float density;
+    float3 color;
+    float3 normal;
+    float smoothness;
+    float metallic;
+};
+RWStructuredBuffer<Voxel> buffer;
+RWTexture2D<float3> animeTexture;
+//P: 3D Point
+//N: Normal
+//The density function
+float Density(float3 p) 
+{
+    float cellularDensity = 0;
+    float maxv = 0;
+    for (int i = 0; i < 1 * quality; i++)
+    {
+        cellularDensity += (1 - cellular(p * pow(2, i) * 0.002)) * pow(0.5, i);
+        maxv += pow(0.5, i);
+    }
+    cellularDensity /= maxv;
+    cellularDensity *= 320;
+    return opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), cellularDensity + p.y - 320);
+    return opSmoothUnion(cellularDensity + p.y - 320, p.y - 150, 60);
+}
+//The color function
+float3 Color(float3 p, float3 lp, float3 n)
+{
+    float3 color = animeTexture[p.xz + 500];
+    color = n;
+    return color;
+}
+//The metallic function
+float Metallic(float3 p, float3 n) 
+{
+    return 0;
+}
+//The Smoothness function
+float Smoothness(float3 p, float3 n)
+{
+    return 0;
+}
+#define NORMAL_EPSILON 0.1
+[numthreads(8,8,8)]
+void VoxelMain(uint3 id : SV_DispatchThreadID)
+{
+    float3 p = (id * chunkScaling + offset) * scale;
+    
+    Voxel voxel;
+    voxel.density = Density(p);
+    float3 normal = normalize(float3(Density(p + float3(NORMAL_EPSILON, 0, 0)) - Density(p - float3(NORMAL_EPSILON, 0, 0)), Density(p + float3(0, NORMAL_EPSILON, 0)) - Density(p - float3(0, NORMAL_EPSILON, 0)), Density(p + float3(0, 0, NORMAL_EPSILON)) - Density(p - float3(0, 0, NORMAL_EPSILON))));
+    voxel.normal = normal;
+    voxel.color = Color(p, id, normal);
+    voxel.metallic = Metallic(p, normal);
+    voxel.smoothness = Smoothness(p, normal);
+    buffer[(id.z * resolution * resolution) + (id.y * resolution) + id.x] = voxel;
+}

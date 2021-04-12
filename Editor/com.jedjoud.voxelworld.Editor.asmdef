@@ -1,0 +1,18 @@
+{
+    "name": "com.jedjoud.voxelworld.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:173b89615eaddaa4094ba831211ae17d"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
