@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEngine;
+using static TerrainUtility;
 
-//A whole octree
+/// <summary>
+/// My octree implementation
+/// </summary>
 public class Octree
 {
     public List<OctreeNode> nodes;//All the nodes we have in the octree
