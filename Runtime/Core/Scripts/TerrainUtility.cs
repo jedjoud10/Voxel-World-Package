@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
+using System.Runtime.CompilerServices;
 /// <summary>
 /// Utility class for terrain
 /// </summary>
@@ -16,7 +17,7 @@ public static class TerrainUtility
     {
         return (position.z * size * size + (position.y * size) + position.x);
     }
-    
+
     /// <summary>
     /// Turns an index to a position
     /// </summary>
@@ -28,7 +29,7 @@ public static class TerrainUtility
         index -= (z * (size) * (size));
         int y = index / (size);
         int x = index % (size);
-        return new int3(x, y, z);
+        return math.int3(x, y, z);
     }
 
     /// <summary>
@@ -37,7 +38,15 @@ public static class TerrainUtility
     public struct MeshVertex 
     {
         public float3 position, color, normal;
-        public float2 smoothness, metallic;
+        public float2 uv;
+        //Custom constructor
+        public MeshVertex(SkirtVoxel a) 
+        {
+            this.position = a.pos;
+            this.color = a.color;
+            this.normal = a.normal;
+            this.uv = a.smoothnessMetallicDensity.xy;
+        }
     }
     
     /// <summary>
@@ -45,7 +54,7 @@ public static class TerrainUtility
     /// </summary>
     public struct MeshTriangle 
     {
-        MeshVertex a, b, c;
+        public MeshVertex a, b, c;
         //Custom getter setter with index
         public MeshVertex this[int index]
         {
@@ -80,6 +89,13 @@ public static class TerrainUtility
                         break;
                 }
             }
+        }
+        //Custom constructor
+        public MeshTriangle(SkirtVoxel a, SkirtVoxel b, SkirtVoxel c) 
+        {
+            this.a = new MeshVertex(a);
+            this.b = new MeshVertex(b);
+            this.c = new MeshVertex(c);
         }
     }
 
@@ -120,8 +136,8 @@ public static class TerrainUtility
     public struct Voxel
     {
         public float density;
-        public Vector3 color;
-        public Vector3 normal;
+        public float3 color;
+        public float3 normal;
         public float smoothness, metallic;
     }
     
@@ -130,27 +146,24 @@ public static class TerrainUtility
     /// </summary>
     public struct SkirtVoxel
     {
-        public SkirtVoxel(Voxel a, Vector3 pos)
+        public float3 pos;
+        public float3 color;
+        public float3 normal;
+        public float3 smoothnessMetallicDensity;
+        //Custom constructors
+        public SkirtVoxel(Voxel a, float3 pos)
         {
             this.pos = pos;
             this.color = a.color;
             this.normal = a.normal;
-            this.smoothness = a.smoothness;
-            this.metallic = a.metallic;
-            this.density = a.density;
+            this.smoothnessMetallicDensity = math.float3(a.smoothness, a.metallic, a.density);
         }
-        public SkirtVoxel(Voxel a, Voxel b, float t, Vector3 pos)
+        public SkirtVoxel(Voxel a, Voxel b, float t, float3 pos)
         {
             this.pos = pos;
             this.color = Vector3.Lerp(a.color, b.color, t);
             this.normal = Vector3.Lerp(a.normal, b.normal, t);
-            this.smoothness = Mathf.Lerp(a.smoothness, b.smoothness, t);
-            this.metallic = Mathf.Lerp(a.metallic, b.metallic, t);
-            this.density = Mathf.Lerp(a.density, b.density, t);
+            this.smoothnessMetallicDensity = math.lerp(math.float3(a.smoothness, a.metallic, a.density), math.float3(b.smoothness, b.metallic, b.density), t);
         }
-        public Vector3 pos;
-        public Vector3 color;
-        public Vector3 normal;
-        public float smoothness, metallic, density;
     }
 }

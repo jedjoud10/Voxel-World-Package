@@ -4,10 +4,12 @@ using UnityEngine;
 using Unity.Jobs;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Burst;
 using static TerrainUtility;
 /// <summary>
 /// Turns the GPU data into a mesh
 /// </summary>
+[BurstCompile]
 public struct MarchingCubesJob : IJobParallelFor
 {
     //Marching cubes variables
@@ -17,7 +19,7 @@ public struct MarchingCubesJob : IJobParallelFor
     public NativeList<MeshTriangle>.ParallelWriter triangles;
     [ReadOnly] public NativeArray<Voxel> voxels;
 
-    //Static variables
+    //Static marching cubes lookup tables variables
     private static readonly int[] mcTable = new int[4096]{
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
      0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
@@ -275,39 +277,37 @@ public struct MarchingCubesJob : IJobParallelFor
      0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
      0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };//Triangulation table from https://paulbourke.net/geometry/polygonise/
-
-    //Marching cubes edge tables
-    private static int3[] edgesToCorners = new int3[12]
+    private static readonly int3[] edgesToCorners = new int3[12]
     {
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
-        new int3(0, 0, 0),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
-        new int3(0, 0, 1),
-        new int3(0, 0, 1),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
+        math.int3(0, 1, 0),
+        math.int3(1, 1, 0),
+        math.int3(1, 0, 0),
+        math.int3(0, 0, 0),
+        math.int3(0, 1, 1),
+        math.int3(1, 1, 1),
+        math.int3(1, 0, 1),
+        math.int3(0, 0, 1),
+        math.int3(0, 0, 1),
+        math.int3(0, 1, 1),
+        math.int3(1, 1, 1),
+        math.int3(1, 0, 1),
     };
-    private static int3[] edgeToCorners2 = new int3[12]
+    private static readonly int3[] edgeToCorners2 = new int3[12]
     {
-        new int3(0, 0, 0),
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
-        new int3(0, 0, 1),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
-        new int3(0, 0, 0),
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
+        math.int3(0, 0, 0),
+        math.int3(0, 1, 0),
+        math.int3(1, 1, 0),
+        math.int3(1, 0, 0),
+        math.int3(0, 0, 1),
+        math.int3(0, 1, 1),
+        math.int3(1, 1, 1),
+        math.int3(1, 0, 1),
+        math.int3(0, 0, 0),
+        math.int3(0, 1, 0),
+        math.int3(1, 1, 0),
+        math.int3(1, 0, 0),
     };
-    private static int[] edgesToCornerIndices = new int[12]
+    private static readonly int[] edgesToCornerIndices = new int[12]
     {
         resolution,
         resolution + 1,
@@ -322,7 +322,7 @@ public struct MarchingCubesJob : IJobParallelFor
         resolution * resolution + resolution + 1,
         resolution * resolution + 1,
     };
-    private static int[] edgesToCornerIndices2 = new int[12]
+    private static readonly int[] edgesToCornerIndices2 = new int[12]
     {
         0,
         resolution,
@@ -336,11 +336,22 @@ public struct MarchingCubesJob : IJobParallelFor
         resolution,
         resolution + 1,
         1,
+    };
+    private static readonly int[] cornerChecks = new int[8]
+    {
+        0,
+        resolution,
+        resolution + 1,
+        1,
+        resolution * resolution,
+        resolution * resolution + resolution,
+        resolution * resolution + resolution + 1,
+        resolution * resolution + 1,
     };
     public void Execute(int index)
     {
-        int3 pos = TerrainUtility.UnflattenIndex(index, resolution);
-        int i = index + resolution + resolution * resolution + 1;
+        int3 pos = TerrainUtility.UnflattenIndex(index, resolution-3);
+        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution);
         //Indexing
         int mcCase = 0;
         if (voxels[i + 0].density < isolevel) mcCase |= 1;
@@ -354,32 +365,31 @@ public struct MarchingCubesJob : IJobParallelFor
         //Every triangle in this marching cubes case
         for (int t = 0; t < 15; t+=3)
         {
-            int tri = mcTable[mcCase * 16 + t];
+            int triBase = mcTable[mcCase * 16 + t];
             MeshTriangle triangle = new MeshTriangle();
-            if (tri != -1)
+            if (triBase != -1)
             {
                 for (int h = 0; h < 3; h++)
                 {
-                    int tri2 = mcTable[mcCase * 16 + t + h];
+                    int tri = mcTable[mcCase * 16 + t + h];
 
                     //Find the zero-crossing point
-                    float lerpValue = math.unlerp(voxels[i + edgesToCornerIndices[tri2]].density, voxels[i + edgesToCornerIndices2[tri2]].density, isolevel);
-                    float3 vertex = (math.lerp(edgesToCorners[tri2], edgeToCorners2[tri2], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
+                    float lerpValue = math.unlerp(voxels[i + edgesToCornerIndices[tri]].density, voxels[i + edgesToCornerIndices2[tri]].density, isolevel);
+                    float3 vertex = (math.lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
                     
-                    Voxel a = voxels[i + edgesToCornerIndices[tri2]];
-                    Voxel b = voxels[i + edgesToCornerIndices2[tri2]];
-                    /*
-                    normals.Add(lowpoly ? Vector3.one : Vector3.Lerp(a.normal, b.normal, lerpValue));
-                    Vector3 color = Vector3.Lerp(a.color, b.color, lerpValue);
-                    colors.Add(new Color(color.x, color.y, color.z, 1.0f));
-                    currentUV.x = Mathf.Lerp(a.smoothness, b.smoothness, lerpValue);
-                    currentUV.y = Mathf.Lerp(a.metallic, b.metallic, lerpValue);
-                    uvs.Add(currentUV);
-                    */
-                    triangle[h] = new MeshVertex() { position = vertex };
+                    Voxel a = voxels[i + edgesToCornerIndices[tri]];
+                    Voxel b = voxels[i + edgesToCornerIndices2[tri]];
+
+                    triangle[h] = new MeshVertex()
+                    {
+                        position = vertex,
+                        color = math.lerp(a.color, b.color, lerpValue),
+                        normal = math.lerp(a.normal, b.normal, lerpValue),
+                        uv = math.lerp(math.float2(a.smoothness, a.metallic), math.float2(b.smoothness, b.metallic), lerpValue)
+                    };
                 }
+                triangles.AddNoResize(triangle);
             }
-            triangles.AddNoResize(triangle);
         }
     }
 }

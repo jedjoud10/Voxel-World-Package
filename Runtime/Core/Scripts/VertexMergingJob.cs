@@ -4,16 +4,19 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Burst;
 using static TerrainUtility;
 /// <summary>
 /// Job that transforms the triangles from the MarchingCubesJob into an actual mesh, with vertex sharing
 /// </summary>
+[BurstCompile]
 public struct VertexMergingJob : IJob
 {
     //Marching Cubes variables
     [ReadOnly] public NativeList<MeshTriangle> mcTriangles;
     //Mesh variables
-    public NativeList<float3> vertices, normals, colors;
+    public NativeList<float3> vertices, normals;
+    public NativeList<float4> colors;
     public NativeList<float2> uvs;
     public NativeList<int> triangles;
     public void Execute()
@@ -21,7 +24,7 @@ public struct VertexMergingJob : IJob
         int vertexCount = 0;
         NativeHashMap<float3, int> hashmap = new NativeHashMap<float3, int>(triangles.Length * 3, Allocator.Temp);
         NativeList<int> map = new NativeList<int>(Allocator.Temp);
-        for (int i = 0; i < mcTriangles.Capacity; i++)
+        for (int i = 0; i < mcTriangles.Length; i++)
         {
             for (int v = 0; v < 3; v++)
             {
@@ -32,6 +35,9 @@ public struct VertexMergingJob : IJob
                     hashmap.Add(vert.position, vertices.Length);
                     map.Add(vertices.Length);
                     vertices.Add(vert.position);
+                    colors.Add(math.float4(vert.color, 1));
+                    normals.Add(vert.normal);
+                    uvs.Add(vert.uv);
                 }
                 else
                 {
@@ -42,5 +48,7 @@ public struct VertexMergingJob : IJob
                 vertexCount++;
             }
         }
+        hashmap.Dispose();
+        map.Dispose();
     }
 }

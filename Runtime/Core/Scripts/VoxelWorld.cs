@@ -10,6 +10,7 @@ using Unity.Collections;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
 using static TerrainUtility;
+using Unity.Mathematics;
 /// <summary>
 /// The whole class handling the creation/generation/removal of chunks
 /// </summary>
@@ -45,29 +46,19 @@ public class VoxelWorld : MonoBehaviour
 
     //GPU-CPU Stuff
     private ComputeBuffer buffer;
-    private Voxel[] voxels = new Voxel[resolution* resolution * resolution];
+    private Voxel[] voxels = new Voxel[resolution * resolution * resolution];
     private NativeArray<Voxel> nativeVoxels;
-    private NativeList<MeshTriangle> triangles;
+    private NativeList<MeshTriangle> mcTriangles;
+    private NativeList<int> triangles;
+    private NativeList<float3> vertices, normals;
+    private NativeList<float4> colors;
+    private NativeList<float2> uvs;
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 64;//The resolution of each chunk> Can either be 8-16-32- or 64
+    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
 
     //Marching squares edge and corner tables
-    private readonly Vector3[,] edgesX = new Vector3[,]
-    {
-            { new Vector3(0, 0, 0), new Vector3(0, 1, 0) },
-            { new Vector3(0, 1, 0), new Vector3(0, 1, 1) },
-            { new Vector3(0, 1, 1), new Vector3(0, 0, 1) },
-            { new Vector3(0, 0, 1), new Vector3(0, 0, 0) },
-    };
-    private readonly int[,] edgesCornersX = new int[,]
-    {
-        { 0, resolution },
-        { resolution, resolution + resolution * resolution },
-        { resolution + resolution * resolution, resolution * resolution },
-        { resolution * resolution, 0 },
-    };
 
     private readonly Vector3[,] edgesY = new Vector3[,]
     {
@@ -129,14 +120,24 @@ public class VoxelWorld : MonoBehaviour
 
         //Cpu Job system allocations
         nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
-        triangles = new NativeList<MeshTriangle>(resolution * resolution * resolution * 5, Allocator.Persistent);
+        mcTriangles = new NativeList<MeshTriangle>(resolution * resolution * resolution * 5, Allocator.Persistent);
+        vertices = new NativeList<float3>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
+        normals = new NativeList<float3>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
+        colors = new NativeList<float4>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
+        uvs = new NativeList<float2>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
+        triangles = new NativeList<int>((resolution - 3) * (resolution - 3) * (resolution - 3) * 5 * 3, Allocator.Persistent);
     }
     private void OnDestroy()
     {
         //Release everything
         buffer.Release();
         nativeVoxels.Dispose();
+        mcTriangles.Dispose();
         triangles.Dispose();
+        vertices.Dispose();
+        colors.Dispose();
+        uvs.Dispose();
+        normals.Dispose();
     }
     // Update is called once per frame
     void Update()
@@ -291,35 +292,7 @@ public class VoxelWorld : MonoBehaviour
         /*
         void CreateSkirtX(int slicePoint, bool flip)
         {
-            for (int y = 0; y < resolution - 3; y++)
-            {
-                for (int z = 0; z < resolution - 3; z++)
-                {
-                    int i = TerrainUtility.FlattenIndex(new Vector3Int(slicePoint+1, y+1, z+1), resolution);
-                    //Indexing
-                    int msCase = 0;
-                    if (localVoxels[i].density < 0) msCase |= 1;
-                    if (localVoxels[i + resolution * resolution].density < 0) msCase |= 2;
-                    if (localVoxels[i + resolution + resolution * resolution].density < 0) msCase |= 4;
-                    if (localVoxels[i + resolution].density < 0) msCase |= 8;
-                    //Get the corners
-                    SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(slicePoint, y, z) * reductionFactorChunkScaled);
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(slicePoint, y + 1, z) * reductionFactorChunkScaled);
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + resolution * resolution], new Vector3(slicePoint, y + 1, z + 1) * reductionFactorChunkScaled);
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(slicePoint, y, z + 1) * reductionFactorChunkScaled);
-                    //Get each edge's skirtVoxel
-                    SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
-                    for (int e = 0; e < 4; e++)
-                    {
-                        Voxel a = localVoxels[i + edgesCornersX[e, 0]];
-                        Voxel b = localVoxels[i + edgesCornersX[e, 1]];
-                        float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesX[e, 0], edgesX[e, 1], lerpValue) + new Vector3(slicePoint, y, z)) * (reductionFactorChunkScaled));
-                    }
-                    SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
-                }
-            }
+
         }
         void CreateSkirtY(int slicePoint, bool flip)
         {
@@ -387,81 +360,7 @@ public class VoxelWorld : MonoBehaviour
                 }
             }
         }
-        //Triangulate the marching squares case
-        void SolveMarchingSquareCase(int msCase, SkirtVoxel[] cornerVoxels, SkirtVoxel[] edgeMiddleVoxels, bool flip)
-        {
-            //Please, someone help me, how can I do something other than this!?!?!
-            switch (msCase)
-            {
-                case 0:
-                    break;
-                case 1:
-                    AddTriangle(cornerVoxels[0], edgeMiddleVoxels[0], edgeMiddleVoxels[3], flip);
-                    break;
-                case 2:
-                    AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[2], cornerVoxels[3], flip);
-                    break;
-                case 3:
-                    AddTriangle(cornerVoxels[0], edgeMiddleVoxels[0], edgeMiddleVoxels[2], flip);
-                    AddTriangle(edgeMiddleVoxels[2], cornerVoxels[3], cornerVoxels[0], flip);
-                    break;
-                case 4:
-                    AddTriangle(edgeMiddleVoxels[2], edgeMiddleVoxels[1], cornerVoxels[2], flip);
-                    break;
-                case 5:
-                    AddTriangle(cornerVoxels[0], edgeMiddleVoxels[0], edgeMiddleVoxels[3], flip);
-                    AddTriangle(cornerVoxels[2], edgeMiddleVoxels[1], edgeMiddleVoxels[2], flip);
-                    break;
-                case 6:
-                    AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[1], cornerVoxels[2], flip);
-                    AddTriangle(cornerVoxels[2], cornerVoxels[3], edgeMiddleVoxels[3], flip);
-                    break;
-                case 7:
-                    AddTriangle(cornerVoxels[0], edgeMiddleVoxels[0], cornerVoxels[3], flip);
-                    AddTriangle(cornerVoxels[3], edgeMiddleVoxels[1], cornerVoxels[2], flip);
-                    AddTriangle(edgeMiddleVoxels[0], edgeMiddleVoxels[1], cornerVoxels[3], flip);
-                    break;
-                case 8:
-                    AddTriangle(edgeMiddleVoxels[1], edgeMiddleVoxels[0], cornerVoxels[1], flip);
-                    break;
-                case 9:
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[1], edgeMiddleVoxels[3], flip);
-                    AddTriangle(edgeMiddleVoxels[3], cornerVoxels[0], cornerVoxels[1], flip);
-                    break;
-                case 10:
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[1], edgeMiddleVoxels[0], flip);
-                    AddTriangle(cornerVoxels[3], edgeMiddleVoxels[3], edgeMiddleVoxels[2], flip);
-                    break;
-                case 11:
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[1], cornerVoxels[0], flip);
-                    AddTriangle(cornerVoxels[0], edgeMiddleVoxels[2], cornerVoxels[3], flip);
-                    AddTriangle(edgeMiddleVoxels[1], edgeMiddleVoxels[2], cornerVoxels[0], flip);
-                    break;
-                case 12:
-                    AddTriangle(edgeMiddleVoxels[2], edgeMiddleVoxels[0], cornerVoxels[1], flip);
-                    AddTriangle(cornerVoxels[1], cornerVoxels[2], edgeMiddleVoxels[2], flip);
-                    break;
-                case 13:
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[3], cornerVoxels[0], flip);
-                    AddTriangle(cornerVoxels[2], edgeMiddleVoxels[2], cornerVoxels[1], flip);
-                    AddTriangle(cornerVoxels[1], edgeMiddleVoxels[2], edgeMiddleVoxels[3], flip);
-                    break;
-                case 14:
-                    AddTriangle(cornerVoxels[2], edgeMiddleVoxels[0], cornerVoxels[1], flip);
-                    AddTriangle(cornerVoxels[3], edgeMiddleVoxels[3], cornerVoxels[2], flip);
-                    AddTriangle(edgeMiddleVoxels[3], edgeMiddleVoxels[0], cornerVoxels[2], flip);
-                    break;
-                case 15:
-                    if ((cornerVoxels[0].density + cornerVoxels[1].density + cornerVoxels[2].density + cornerVoxels[3].density) / 4 > -chunk.octreeNodeSize / 15)
-                    {
-                        AddTriangle(cornerVoxels[0], cornerVoxels[1], cornerVoxels[2], flip);
-                        AddTriangle(cornerVoxels[2], cornerVoxels[3], cornerVoxels[0], flip);
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+        
         //Add a single trianle to the mesh (Used for skirts)
         void AddTriangle(SkirtVoxel a, SkirtVoxel b, SkirtVoxel c, bool flip)
         {
@@ -510,23 +409,55 @@ public class VoxelWorld : MonoBehaviour
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);
         nativeVoxels.CopyFrom(voxels);
-        
+        triangles.Clear();
+        mcTriangles.Clear();
+        vertices.Clear();
+        normals.Clear();
+        colors.Clear();
+        uvs.Clear();
+
         //Job system
         MarchingCubesJob mcjob = new MarchingCubesJob()
         {
             chunkSize = node.chunkSize,
             isolevel = isolevel,
-            triangles = triangles.AsParallelWriter(),
+            triangles = mcTriangles.AsParallelWriter(),
             voxels = nativeVoxels
         };
-        mcjob.Run((resolution - 3) * (resolution - 3) * (resolution - 3));
-    }
-    //Callback
-    private void GPUCallback(AsyncGPUReadbackRequest val, Chunk chunk, OctreeNode node) 
-    {    
-        /*
 
-        */
+        VertexMergingJob vmJob = new VertexMergingJob()
+        {
+            mcTriangles = mcTriangles,
+            vertices = vertices,
+            normals = normals,
+            colors = colors,
+            uvs = uvs,
+            triangles = triangles,
+        };
+
+        JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
+        JobHandle vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
+        vertexMergingHandle.Complete();
+
+        //Create the mesh and update it
+        Mesh mesh = new Mesh();
+        mesh.SetVertices(vertices.AsArray());
+        mesh.SetNormals(normals.AsArray());
+        mesh.SetUVs(0, uvs.AsArray());
+        mesh.SetColors(colors.AsArray());
+        mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
+        ChunkThreadedMesh r;
+        threadedMeshes.TryRemove(chunk, out r);
+        chunksUpdating.Remove(chunk);
+        if (vertices.Length == 0)
+        {
+            Destroy(chunk.chunkGameObject);
+        }
+        chunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
+        chunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
+        chunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+
+        //AddThreadedMesh(chunk, new ChunkThreadedMesh() { vertices = vertices.to })
     }
     //If we already find a threaded mesh in the threadedMesh list, overwrite it
     private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)
