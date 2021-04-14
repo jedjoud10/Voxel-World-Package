@@ -33,6 +33,8 @@ public class VoxelWorld : MonoBehaviour
     public Texture2D texture;
     public float isolevel;
     public Vector3 offset, scale;
+    [Range(1, 8)]
+    public int chunksRanInParallel = 2;
 
     //Other stuff
     #region Some hellish fire bellow
@@ -57,7 +59,6 @@ public class VoxelWorld : MonoBehaviour
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
     public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
-    public const int chunksRanInParallel = 2;
 
     //Marching squares edge and corner tables
     private readonly Vector3[,] edgesY = new Vector3[,]
@@ -112,6 +113,7 @@ public class VoxelWorld : MonoBehaviour
 
         generationShader.SetInt("resolution", resolution);
         generationShader.SetVector("scale", scale);
+        generationShader.SetInt("chunksRanInParallel", chunksRanInParallel);
 
         voxelsBuffer = new ComputeBuffer((resolution) * (resolution) * (resolution) * chunksRanInParallel, sizeof(float) * 9);
         chunksBuffer = new ComputeBuffer(chunksRanInParallel, sizeof(float) * 5);
@@ -148,9 +150,9 @@ public class VoxelWorld : MonoBehaviour
     {
         //Generate a mesh for the new chunks
         //Generate the chunks from the requests
-        if (chunkUpdateRequests.Count > 0 && Time.frameCount % 60 == 0 )
+        if (chunkUpdateRequests.Count > 0 && Time.frameCount % 4 == 0)
         {
-            IEnumerable<KeyValuePair<OctreeNode, ChunkUpdateRequest>> pairs = chunkUpdateRequests.Take(2);
+            IEnumerable<KeyValuePair<OctreeNode, ChunkUpdateRequest>> pairs = chunkUpdateRequests.Take(chunksRanInParallel);
             GenerateChunks(pairs.ToArray());
         }        
 
@@ -398,7 +400,7 @@ public class VoxelWorld : MonoBehaviour
         generationShader.Dispatch(1, (resolution / 8) * pairs.Length, resolution / 8, resolution / 8);
         voxelsBuffer.GetData(voxels);        
         nativeVoxels.CopyFrom(voxels);
-
+        
         for (int i = 0; i < pairs.Length; i++)
         {
             triangles.Clear();
@@ -412,6 +414,7 @@ public class VoxelWorld : MonoBehaviour
             MarchingCubesJob mcjob = new MarchingCubesJob()
             {
                 chunkSize = pairs[i].Key.chunkSize,
+                chunkIndexInParallelLoop = i,
                 isolevel = isolevel,
                 triangles = mcTriangles.AsParallelWriter(),
                 voxels = nativeVoxels
@@ -428,7 +431,7 @@ public class VoxelWorld : MonoBehaviour
                 triangles = triangles,
             };
 
-            JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3) * pairs.Length, 128);
+            JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
             //marchingCubesHandle.Complete();
             JobHandle vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
             vertexMergingHandle.Complete();

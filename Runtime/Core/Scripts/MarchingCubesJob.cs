@@ -16,6 +16,7 @@ public struct MarchingCubesJob : IJobParallelFor
     private const int resolution = VoxelWorld.resolution;
     public float chunkSize;
     public float isolevel;
+    public int chunkIndexInParallelLoop;
     public NativeList<MeshTriangle>.ParallelWriter triangles;
     [ReadOnly] public NativeArray<Voxel> voxels;
 
@@ -339,8 +340,8 @@ public struct MarchingCubesJob : IJobParallelFor
     };
     public void Execute(int index)
     {
-        int3 pos = TerrainUtility.UnflattenIndex(index % ((resolution - 3) * (resolution - 3) * (resolution - 3)), resolution-3);
-        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution) + ((index / ((resolution - 3) * (resolution - 3) * (resolution - 3))) * resolution * resolution * resolution);
+        int3 pos = TerrainUtility.UnflattenIndex(index, resolution-3);
+        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution) + (chunkIndexInParallelLoop * resolution * resolution * resolution);
         //Indexing
         int mcCase = 0;
         if (voxels[i + 0].density < isolevel) mcCase |= 1;

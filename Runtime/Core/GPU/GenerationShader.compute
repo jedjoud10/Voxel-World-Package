@@ -10,6 +10,7 @@
 //Base values
 int resolution;
 float3 scale;
+int chunksRanInParallel;
 
 //CPU-GPU Structs
 struct Voxel 
@@ -67,7 +68,7 @@ float Smoothness(float3 p, float3 n, GPUChunkData chunk)
 {
     return 0;
 }
-int flt(uint3 pos) { return (pos.z * resolution * resolution) + (pos.y * resolution) + pos.x; }
+inline int flt(uint3 pos) { return (pos.z * resolution * resolution) + (pos.y * resolution) + pos.x; }
 
 [numthreads(8,8,8)]
 void VoxelMain(uint3 id1 : SV_DispatchThreadID)
@@ -118,6 +119,7 @@ void VoxelNormal(uint3 id1 : SV_DispatchThreadID)
     //Apply everything
     voxel.normal = normal;
     voxel.color = Color(p, id / (float)resolution, normal, chunk);
+    voxel.color = (id1.x / resolution) / (float)chunksRanInParallel;
     voxel.metallic = Metallic(p, normal, chunk);
     voxel.smoothness = Smoothness(p, normal, chunk);
     voxelsBuffer[index] = voxel;
