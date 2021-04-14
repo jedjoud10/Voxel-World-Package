@@ -125,12 +125,12 @@ public class VoxelWorld : MonoBehaviour
 
         //Cpu Job system allocations
         nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
-        mcTriangles = new NativeList<MeshTriangle>(resolution * resolution * resolution * 5, Allocator.Persistent);
-        vertices = new NativeList<float3>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
-        normals = new NativeList<float3>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
-        colors = new NativeList<float4>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
-        uvs = new NativeList<float2>((resolution - 3) * (resolution - 3) * (resolution - 3) * 12, Allocator.Persistent);
-        triangles = new NativeList<int>((resolution - 3) * (resolution - 3) * (resolution - 3) * 5 * 3, Allocator.Persistent);
+        mcTriangles = new NativeList<MeshTriangle>((resolution - 3) * (resolution - 3) * (resolution - 3) * 5 + (6 * resolution * resolution * 2), Allocator.Persistent);
+        vertices = new NativeList<float3>(mcTriangles.Capacity * 3, Allocator.Persistent);
+        normals = new NativeList<float3>(mcTriangles.Capacity * 3, Allocator.Persistent);
+        colors = new NativeList<float4>(mcTriangles.Capacity * 3, Allocator.Persistent);
+        uvs = new NativeList<float2>(mcTriangles.Capacity * 3, Allocator.Persistent);
+        triangles = new NativeList<int>(mcTriangles.Capacity * 3, Allocator.Persistent);
     }
     private void OnDestroy()
     {
@@ -149,27 +149,17 @@ public class VoxelWorld : MonoBehaviour
     {
         //Generate a mesh for the new chunks
         //Generate the chunks from the requests
-        if (chunkUpdateRequests.Count > 1 && completed)
+        if (chunkUpdateRequests.Count > 0 && Time.frameCount % 3 == 0 && completed)
         {
-            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.ElementAt(0);
-            KeyValuePair<OctreeNode, ChunkUpdateRequest> request1 = chunkUpdateRequests.ElementAt(1);
-            GenerateMesh(request.Value.chunk, request.Key);
-            chunkUpdateRequests.Remove(request.Key);
-            chunkUpdateRequests.Remove(request1.Key);
-        }
-        else if(chunkUpdateRequests.Count > 0 && completed)
-        {
-            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.ElementAt(0);
-            KeyValuePair<OctreeNode, ChunkUpdateRequest> request1 = chunkUpdateRequests.ElementAt(1);
+            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.First();
             GenerateMesh(request.Value.chunk, request.Key);
             chunkUpdateRequests.Remove(request.Key);
         }
-        
 
         //Create the chunks
         if (octree.toAdd.Count > 0)
         {
-            for (int i = 0; i < 64; i++)
+            for (int i = 0; i < 16; i++)
             {
                 if (octree.toAdd.Count > 0)
                 {
@@ -207,9 +197,28 @@ public class VoxelWorld : MonoBehaviour
             }
         }
 
-        if (!completed)
+        if (!completed && Time.frameCount % 3 == 2)
         {
+            vertexMergingHandle.Complete();
+            completed = true;
 
+            //Create the mesh and update it
+            Mesh mesh = new Mesh();
+            mesh.SetVertices(vertices.AsArray());
+            mesh.SetNormals(normals.AsArray());
+            mesh.SetUVs(0, uvs.AsArray());
+            mesh.SetColors(colors.AsArray());
+            mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
+            ChunkThreadedMesh r;
+            threadedMeshes.TryRemove(currentChunk, out r);
+            chunksUpdating.Remove(currentChunk);
+            if (vertices.Length == 0)
+            {
+                Destroy(currentChunk.chunkGameObject);
+            }
+            currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
+            currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
+            currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
         }
     }
     //When we create a new chunk
@@ -386,9 +395,7 @@ public class VoxelWorld : MonoBehaviour
                 map.Add(hashmap[skirtVoxel.pos]);
             }
         }
-        */
-        //End
-        AddThreadedMesh(chunk, new ChunkThreadedMesh() { vertices = vertices.ToArray(), normals = normals.ToArray(), colors = colors.ToArray(), uvs = uvs.ToArray(), triangles = triangles.ToArray() });
+    */
     }
     //Generate the mesh for a specific chunk    
     public void GenerateMesh(Chunk chunk, OctreeNode node)
@@ -397,11 +404,10 @@ public class VoxelWorld : MonoBehaviour
         Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
         generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
         generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
-        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
+        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.5f));
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);
-
         
         nativeVoxels.CopyFrom(voxels);
         triangles.Clear();
@@ -431,57 +437,12 @@ public class VoxelWorld : MonoBehaviour
             triangles = triangles,
         };
 
-        MeshingJob mJob = new MeshingJob()
-        {
-            lowpoly = lowpoly,
-            mcTriangles = mcTriangles,
-            vertices = vertices.AsParallelWriter(),
-            normals = normals.AsParallelWriter(),
-            colors = colors.AsParallelWriter(),
-            uvs = uvs.AsParallelWriter(),
-            triangles = triangles.AsParallelWriter(),
-        };
-
         JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
         //marchingCubesHandle.Complete();
         vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
         currentChunk = chunk;
-        completed = false;
-        vertexMergingHandle.Complete();
-        completed = true;
-
-        //Create the mesh and update it
-        Mesh mesh = new Mesh();
-        mesh.SetVertices(vertices.AsArray());
-        mesh.SetNormals(normals.AsArray());
-        mesh.SetUVs(0, uvs.AsArray());
-        mesh.SetColors(colors.AsArray());
-        mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
-        ChunkThreadedMesh r;
-        threadedMeshes.TryRemove(currentChunk, out r);
-        chunksUpdating.Remove(currentChunk);
-        if (vertices.Length == 0)
-        {
-            Destroy(currentChunk.chunkGameObject);
-        }
-        currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
-        currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-        currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+        completed = false;       
         //JobHandle meshingHandle = mJob.Schedule(mcTriangles.Length, 64);
-    }
-    //If we already find a threaded mesh in the threadedMesh list, overwrite it
-    private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)
-    {
-        if (!threadedMeshes.ContainsKey(chunk))
-        {
-            threadedMeshes.TryAdd(chunk, threadedMesh);
-        }
-        else
-        {
-            ChunkThreadedMesh r;
-            threadedMeshes.TryGetValue(chunk, out r);
-            threadedMeshes.TryUpdate(chunk, threadedMesh, r);
-        }
     }
     //Show some debug info
     private void OnGUI()
