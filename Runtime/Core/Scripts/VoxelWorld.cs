@@ -43,8 +43,11 @@ public class VoxelWorld : MonoBehaviour
     public VoxelEditsManager voxelEditsManager;
     public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
-    //GPU Stuff
-    private ComputeBuffer buffer;    
+    //GPU-CPU Stuff
+    private ComputeBuffer buffer;
+    private Voxel[] voxels = new Voxel[resolution* resolution * resolution];
+    private NativeArray<Voxel> nativeVoxels;
+    private NativeList<MeshTriangle> triangles;
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
@@ -123,11 +126,17 @@ public class VoxelWorld : MonoBehaviour
 
         generationShader.SetBuffer(0, "buffer", buffer);
         generationShader.SetBuffer(1, "buffer", buffer);
+
+        //Cpu Job system allocations
+        nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
+        triangles = new NativeList<MeshTriangle>(resolution * resolution * resolution * 5, Allocator.Persistent);
     }
     private void OnDestroy()
     {
         //Release everything
         buffer.Release();
+        nativeVoxels.Dispose();
+        triangles.Dispose();
     }
     // Update is called once per frame
     void Update()
@@ -499,8 +508,25 @@ public class VoxelWorld : MonoBehaviour
         generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
-        //Voxel[] voxels = new Voxel[(resolution) * (resolution) * (resolution)];
-        //ThreadPool.QueueUserWorkItem(MarchingCubesWithSkirtsMultithreaded, new object[3] { voxels, node, chunk });
+        buffer.GetData(voxels);
+        nativeVoxels.CopyFrom(voxels);
+        
+        //Job system
+        MarchingCubesJob mcjob = new MarchingCubesJob()
+        {
+            chunkSize = node.chunkSize,
+            isolevel = isolevel,
+            triangles = triangles.AsParallelWriter(),
+            voxels = nativeVoxels
+        };
+        mcjob.Run((resolution - 3) * (resolution - 3) * (resolution - 3));
+    }
+    //Callback
+    private void GPUCallback(AsyncGPUReadbackRequest val, Chunk chunk, OctreeNode node) 
+    {    
+        /*
+
+        */
     }
     //If we already find a threaded mesh in the threadedMesh list, overwrite it
     private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)

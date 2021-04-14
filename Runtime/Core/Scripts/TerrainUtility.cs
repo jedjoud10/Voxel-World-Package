@@ -34,7 +34,7 @@ public static class TerrainUtility
     /// <summary>
     /// A single "vertex" of Marching Cube data
     /// </summary>
-    public struct VertexData 
+    public struct MeshVertex 
     {
         public float3 position, color, normal;
         public float2 smoothness, metallic;
@@ -45,9 +45,9 @@ public static class TerrainUtility
     /// </summary>
     public struct MeshTriangle 
     {
-        VertexData a, b, c;
+        MeshVertex a, b, c;
         //Custom getter setter with index
-        public VertexData this[int index]
+        public MeshVertex this[int index]
         {
             get 
             {
@@ -60,7 +60,7 @@ public static class TerrainUtility
                     case 2:
                         return c;
                     default:
-                        return default(VertexData);
+                        return default(MeshVertex);
                 }
             }
             set 

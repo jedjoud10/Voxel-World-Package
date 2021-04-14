@@ -19,30 +19,28 @@ public struct VertexMergingJob : IJob
     public void Execute()
     {
         int vertexCount = 0;
+        NativeHashMap<float3, int> hashmap = new NativeHashMap<float3, int>(triangles.Length * 3, Allocator.Temp);
+        NativeList<int> map = new NativeList<int>(Allocator.Temp);
         for (int i = 0; i < mcTriangles.Capacity; i++)
         {
-            if (!hashmap.ContainsKey(vertex))
+            for (int v = 0; v < 3; v++)
             {
-                //First time we generate this vertex
-                hashmap.Add(vertex, vertices.Count);
-                map.Add(vertices.Count);
-                vertices.Add(vertex);
-                Voxel a = localVoxels[i + edgesToCornerIndices[tri]];
-                Voxel b = localVoxels[i + edgesToCornerIndices2[tri]];
-                normals.Add(lowpoly ? Vector3.one : Vector3.Lerp(a.normal, b.normal, lerpValue));
-                Vector3 color = Vector3.Lerp(a.color, b.color, lerpValue);
-                colors.Add(new Color(color.x, color.y, color.z, 1.0f));
-                currentUV.x = Mathf.Lerp(a.smoothness, b.smoothness, lerpValue);
-                currentUV.y = Mathf.Lerp(a.metallic, b.metallic, lerpValue);
-                uvs.Add(currentUV);
+                MeshVertex vert = mcTriangles[i][v];
+                if (!hashmap.ContainsKey(vert.position))
+                {
+                    //First time we generate this vertex
+                    hashmap.Add(vert.position, vertices.Length);
+                    map.Add(vertices.Length);
+                    vertices.Add(vert.position);
+                }
+                else
+                {
+                    //Reuse the vertex
+                    map.Add(hashmap[vert.position]);
+                }
+                triangles.Add(map[triangles.Length]);
+                vertexCount++;
             }
-            else
-            {
-                //Reuse the vertex
-                map.Add(hashmap[vertex]);
-            }
-            triangles.Add(map[triangles.Count]);
-            vertexCount++;
         }
     }
 }

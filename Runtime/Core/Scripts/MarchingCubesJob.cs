@@ -376,7 +376,7 @@ public struct MarchingCubesJob : IJobParallelFor
                     currentUV.y = Mathf.Lerp(a.metallic, b.metallic, lerpValue);
                     uvs.Add(currentUV);
                     */
-                    triangle[h] = new VertexData() { position = vertex };
+                    triangle[h] = new MeshVertex() { position = vertex };
                 }
             }
             triangles.AddNoResize(triangle);
