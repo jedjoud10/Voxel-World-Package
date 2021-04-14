@@ -337,21 +337,10 @@ public struct MarchingCubesJob : IJobParallelFor
         resolution + 1,
         1,
     };
-    private static readonly int[] cornerChecks = new int[8]
-    {
-        0,
-        resolution,
-        resolution + 1,
-        1,
-        resolution * resolution,
-        resolution * resolution + resolution,
-        resolution * resolution + resolution + 1,
-        resolution * resolution + 1,
-    };
     public void Execute(int index)
     {
-        int3 pos = TerrainUtility.UnflattenIndex(index, resolution-3);
-        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution);
+        int3 pos = TerrainUtility.UnflattenIndex(index % ((resolution - 3) * (resolution - 3) * (resolution - 3)), resolution-3);
+        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution) + ((index / ((resolution - 3) * (resolution - 3) * (resolution - 3))) * resolution * resolution * resolution);
         //Indexing
         int mcCase = 0;
         if (voxels[i + 0].density < isolevel) mcCase |= 1;

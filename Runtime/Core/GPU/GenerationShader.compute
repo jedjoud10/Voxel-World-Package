@@ -8,13 +8,10 @@
 #include "./GenerationShaders/Others/noises/erosionnoise.cginc"
 
 //Base values
-float3 offset;
-float3 scale;
-float chunkScaling;
 int resolution;
-float quality;
+float3 scale;
 
-//Data stuff
+//CPU-GPU Structs
 struct Voxel 
 {
     float density;
@@ -23,16 +20,24 @@ struct Voxel
     float smoothness;
     float metallic;
 };
-RWStructuredBuffer<Voxel> buffer;
+struct GPUChunkData
+{
+    float3 offset;
+    float chunkScaling;
+    float quality;
+};
+
+RWStructuredBuffer<Voxel> voxelsBuffer;
+RWStructuredBuffer<GPUChunkData> chunksBuffer;
 RWTexture2D<float3> animeTexture;
 //P: 3D Point
 //N: Normal
 //The density function
-float Density(float3 p) 
+float Density(float3 p, GPUChunkData chunk) 
 {
     float cellularDensity = 0;
     float maxv = 0;
-    for (int i = 0; i < 8 * quality; i++)
+    for (int i = 0; i < 8 * chunk.quality; i++)
     {
         cellularDensity += (1 - cellular(p * pow(2, i) * 0.002)) * pow(0.5, i);
         maxv += pow(0.5, i);
@@ -46,53 +51,74 @@ float Density(float3 p)
     return cellularDensity + sphere;
 }
 //The color function
-float3 Color(float3 p, float3 lp, float3 n)
+float3 Color(float3 p, float3 lp, float3 n, GPUChunkData chunk)
 {
     float3 color = animeTexture[(p.xz + 1024)*0.58];
     color = saturate(p.y / 320);
     return color;
 }
 //The metallic function
-float Metallic(float3 p, float3 n) 
+float Metallic(float3 p, float3 n, GPUChunkData chunk)
 {
     return 0;
 }
 //The Smoothness function
-float Smoothness(float3 p, float3 n)
+float Smoothness(float3 p, float3 n, GPUChunkData chunk)
 {
     return 0;
 }
 int flt(uint3 pos) { return (pos.z * resolution * resolution) + (pos.y * resolution) + pos.x; }
 
 [numthreads(8,8,8)]
-void VoxelMain(uint3 id : SV_DispatchThreadID)
-{
-    float3 p = (id * chunkScaling + offset) * scale;
-    
+void VoxelMain(uint3 id1 : SV_DispatchThreadID)
+{    
+    //Get the corresponding chunk and correct id
+    GPUChunkData chunk = chunksBuffer[id1.x / resolution];
+    uint3 id = int3(id1.x % resolution, id1.yz);
+
+    //Index offset used to turn the local index into a global voxel position
+    uint idxOffset = (id1.x / resolution) * (resolution * resolution * resolution);
+    int index = flt(id) + idxOffset;
+
+    //Calculate the local-chunk voxel position
+    float3 p = (id * chunk.chunkScaling + chunk.offset) * scale;    
     Voxel voxel;
-    voxel.density = Density(p);
+
+    //Apply the density
+    voxel.density = Density(p, chunk);
     voxel.normal = 1;
     voxel.color = 1;
     voxel.metallic = 0;
     voxel.smoothness = 0;
-    buffer[(id.z * resolution * resolution) + (id.y * resolution) + id.x] = voxel;
+    voxelsBuffer[index] = voxel;
 }
 
 [numthreads(8, 8, 8)]
-void VoxelNormal(uint3 id : SV_DispatchThreadID)
+void VoxelNormal(uint3 id1 : SV_DispatchThreadID)
 {
-    float3 p = (id * chunkScaling + offset) * scale;
-    int index = flt(id);
-    Voxel voxel = buffer[index];
+    //Get the corresponding chunk and correct id
+    GPUChunkData chunk = chunksBuffer[id1.x / resolution];
+    uint3 id = uint3(id1.x % resolution, id1.yz);
+
+    //Index offset used to turn the local index into a global voxel position
+    uint idxOffset = (id1.x / resolution) * (resolution * resolution * resolution);
+    int index = flt(id) + idxOffset;
+
+    //Calculate the local-chunk voxel position
+    float3 p = (id * chunk.chunkScaling + chunk.offset) * scale;
+    Voxel voxel = voxelsBuffer[index];
+    
+    //Calculate the normal
     float3 normal = 0;
-    normal.x = buffer[flt(uint3(1, 0, 0) + id)].density - buffer[flt(uint3(-1, 0, 0) + id)].density;
-    normal.y = buffer[flt(uint3(0, 1, 0) + id)].density - buffer[flt(uint3(0, -1, 0) + id)].density;
-    normal.z = buffer[flt(uint3(0, 0, 1) + id)].density - buffer[flt(uint3(0, 0, -1) + id)].density;
+    normal.x = voxelsBuffer[flt(uint3(1, 0, 0) + id) + idxOffset].density - voxelsBuffer[flt(uint3(-1, 0, 0) + id) + idxOffset].density;
+    normal.y = voxelsBuffer[flt(uint3(0, 1, 0) + id) + idxOffset].density - voxelsBuffer[flt(uint3(0, -1, 0) + id) + idxOffset].density;
+    normal.z = voxelsBuffer[flt(uint3(0, 0, 1) + id) + idxOffset].density - voxelsBuffer[flt(uint3(0, 0, -1) + id) + idxOffset].density;
     normal = normalize(normal);
 
+    //Apply everything
     voxel.normal = normal;
-    voxel.color = Color(p, id / (float)resolution, normal);
-    voxel.metallic = Metallic(p, normal);
-    voxel.smoothness = Smoothness(p, normal);
-    buffer[index] = voxel;
+    voxel.color = Color(p, id / (float)resolution, normal, chunk);
+    voxel.metallic = Metallic(p, normal, chunk);
+    voxel.smoothness = Smoothness(p, normal, chunk);
+    voxelsBuffer[index] = voxel;
 }

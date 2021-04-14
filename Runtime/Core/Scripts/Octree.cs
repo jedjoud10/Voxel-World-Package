@@ -197,12 +197,3 @@ public class Octree
         }
     }
 }
-//A singular octree node
-public struct OctreeNode
-{
-    public int hierarchyIndex, size;
-    public Vector3Int position;
-    public Vector3 chunkPosition;
-    public float chunkSize;
-    public bool isLeaf;
-}

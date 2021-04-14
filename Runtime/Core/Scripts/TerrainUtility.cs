@@ -109,6 +109,23 @@ public static class TerrainUtility
     }
 
     /// <summary>
+    /// A singular octree node
+    /// </summary>
+    public struct OctreeNode
+    {
+        public int hierarchyIndex, size;
+        public Vector3Int position;
+        public Vector3 chunkPosition;
+        public float chunkSize;
+        public bool isLeaf;
+        public override string ToString()
+        {
+            return $"Pos: {position}, Size: {size}. ChunkPos: {chunkPosition}, ChunkSize: {chunkSize}, HierarchyIndex: {hierarchyIndex}, IsLeaf: {isLeaf}";
+        }   
+    }
+
+
+    /// <summary>
     /// A chunk that stores data about the world
     /// </summary>
     public struct Chunk
@@ -116,6 +133,20 @@ public static class TerrainUtility
         public Vector3 position;
         public GameObject chunkGameObject;
         public int octreeNodeSize;
+        public override string ToString()
+        {
+            return $"Pos: {position}, nodeSize: {octreeNodeSize}";
+        }
+    }
+
+    /// <summary>
+    /// Chunk data that will be passed to the GPU to generate multiple chunks at the same time
+    /// </summary>
+    public struct GPUChunkData 
+    {
+        public Vector3 offset;
+        public float chunkScaling;
+        public float quality;
     }
 
     /// <summary>
