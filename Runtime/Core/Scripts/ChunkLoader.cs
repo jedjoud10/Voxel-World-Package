@@ -19,7 +19,7 @@ public class ChunkLoader : MonoBehaviour
     {
         if (Time.frameCount % 20 == 0 && (Vector3.Distance(lastPosition, transform.position) > 1f || Time.frameCount < 21))
         {
-            voxelWorld.octree.UpdateOctree(transform.position);
+            voxelWorld.octree.UpdateOctree(new TerrainUtility.CameraData() { position = transform.position, forwardVector = transform.forward });
             lastPosition = transform.position;
         }
     }    

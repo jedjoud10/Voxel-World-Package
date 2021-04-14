@@ -31,10 +31,10 @@ public class Octree
     }
 
     //Create a new octree, and find the differences between this octree and last's frame octree
-    public void UpdateOctree(Vector3 _cameraPosition)
+    public void UpdateOctree(CameraData cameraData)
     {
         //CreateOctreeThreaded(new object[] { _cameraPosition });
-        ThreadPool.QueueUserWorkItem(CreateOctreeThreaded, new object[] { _cameraPosition });
+        ThreadPool.QueueUserWorkItem(CreateOctreeThreaded, new object[] { cameraData });
     }
     //Checks what nodes we need to edit
     public void CheckNodesToEdit(VoxelEditRequestBatch voxelEditRequestBatch)
@@ -50,7 +50,7 @@ public class Octree
         List<OctreeNode> nodesToProcess = new List<OctreeNode>();
         List<OctreeNode> newNodes = new List<OctreeNode>();
         Dictionary<OctreeNode, OctreeNodeChildrenCarrier> localChildrenCarriers = new Dictionary<OctreeNode, OctreeNodeChildrenCarrier>();
-        Vector3 cameraPos = (Vector3)(((object[])state)[0]);
+        CameraData cameraData = (CameraData)(((object[])state)[0]);
         //Setup root octree
         float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
         OctreeNode rootOctree = new OctreeNode();
@@ -74,7 +74,7 @@ public class Octree
             //Create children
             int childrenIndex = 0;
             int[] childrenPointers = new int[8];
-            if (Vector3.Distance(cameraPos, octreeParentNode.chunkPosition + new Vector3(octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f)) < (octreeParentNode.chunkSize + voxelWorld.LODBias) && octreeParentNode.hierarchyIndex < maxHierarchyIndex)
+            if (Vector3.Distance(cameraData.position, octreeParentNode.chunkPosition + new Vector3(octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f)) < (octreeParentNode.chunkSize + voxelWorld.LODBias) && octreeParentNode.hierarchyIndex < maxHierarchyIndex)
             {
                 for (int x = 0; x < 2; x++)
                 {
@@ -109,6 +109,8 @@ public class Octree
             }
             localChildrenCarriers.Add(octreeParentNode, new OctreeNodeChildrenCarrier { children = childrenPointers });
         }
+
+        //Find what nodes we added/removed from the octree
         HashSet<OctreeNode> addedOctreeNodesHashset = new HashSet<OctreeNode>(newNodes);
         HashSet<OctreeNode> removedOctreeNodesHashset = new HashSet<OctreeNode>(nodes);
 
@@ -122,7 +124,7 @@ public class Octree
             toRemove.Clear();
             toAdd.Clear();
             toAdd.AddRange(addedOctreeNodesHashset);
-            toAdd = toAdd.OrderByDescending(x => x.hierarchyIndex).ToList();
+            toAdd = toAdd.OrderByDescending(x => (Vector3.Dot((x.chunkPosition - cameraData.position).normalized, cameraData.forwardVector)) + x.hierarchyIndex).ToList();
             toRemove.AddRange(removedOctreeNodesHashset);
             nodesChildrenCarrier = localChildrenCarriers;
             nodes = newNodes;//Update octree

@@ -46,6 +46,7 @@ public class VoxelWorld : MonoBehaviour
 
     //GPU-CPU Stuff
     private ComputeBuffer buffer;
+    private ComputeBuffer buffer1;
     private Voxel[] voxels = new Voxel[resolution * resolution * resolution];
     private NativeArray<Voxel> nativeVoxels;
     private NativeList<MeshTriangle> mcTriangles;
@@ -58,8 +59,12 @@ public class VoxelWorld : MonoBehaviour
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
     public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
 
-    //Marching squares edge and corner tables
+    //Job system stuff
+    private JobHandle vertexMergingHandle;
+    private Chunk currentChunk;
+    private bool completed = true;
 
+    //Marching squares edge and corner tables
     private readonly Vector3[,] edgesY = new Vector3[,]
     {
         { new Vector3(0, 0, 0), new Vector3(1, 0, 0) },
@@ -102,7 +107,7 @@ public class VoxelWorld : MonoBehaviour
         chunksUpdating = new HashSet<Chunk>();
 
         //Setup first time compute shader stuff
-        RenderTexture rt = new RenderTexture(1024, 1024, 0);
+        RenderTexture rt = new RenderTexture(2048, 1024, 0);
         rt.enableRandomWrite = true;
         RenderTexture.active = rt;
         rt.wrapMode = TextureWrapMode.Clamp;
@@ -143,80 +148,68 @@ public class VoxelWorld : MonoBehaviour
     void Update()
     {
         //Generate a mesh for the new chunks
-        for (int i = 0; i < 1; i++)
+        //Generate the chunks from the requests
+        if (chunkUpdateRequests.Count > 1 && completed)
         {
-            //Generate the chunks from the requests
-            if (chunkUpdateRequests.Count > 0 && Time.frameCount % 2 == 0)
-            {
-                KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.First();
-                GenerateMesh(request.Value.chunk, request.Key);
-                chunkUpdateRequests.Remove(request.Key);
-            }
+            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.ElementAt(0);
+            KeyValuePair<OctreeNode, ChunkUpdateRequest> request1 = chunkUpdateRequests.ElementAt(1);
+            GenerateMesh(request.Value.chunk, request.Key);
+            chunkUpdateRequests.Remove(request.Key);
+            chunkUpdateRequests.Remove(request1.Key);
         }
+        else if(chunkUpdateRequests.Count > 0 && completed)
+        {
+            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.ElementAt(0);
+            KeyValuePair<OctreeNode, ChunkUpdateRequest> request1 = chunkUpdateRequests.ElementAt(1);
+            GenerateMesh(request.Value.chunk, request.Key);
+            chunkUpdateRequests.Remove(request.Key);
+        }
+        
 
         //Create the chunks
-        for (int i = 0; i < 64; i++)
+        if (octree.toAdd.Count > 0)
         {
-            if (octree.toAdd.Count > 0)
+            for (int i = 0; i < 64; i++)
             {
-                if (!chunks.ContainsKey(octree.toAdd[0]))
+                if (octree.toAdd.Count > 0)
                 {
-                    if (octree.toAdd[0].isLeaf)
+                    if (!chunks.ContainsKey(octree.toAdd[0]))
                     {
-                        Chunk chunk = CreateNewChunk(octree.toAdd[0]);
-                        chunks.Add(octree.toAdd[0], chunk);
-                        chunksUpdating.Add(chunk);
+                        if (octree.toAdd[0].isLeaf)
+                        {
+                            Chunk chunk = CreateNewChunk(octree.toAdd[0]);
+                            chunks.Add(octree.toAdd[0], chunk);
+                            chunksUpdating.Add(chunk);
+                        }
                     }
+                    octree.toAdd.RemoveAt(0);
                 }
-                octree.toAdd.RemoveAt(0);
             }
         }
-
         //Remove the chunks
-        for (int i = 0; i < 128; i++)
+        if (octree.toRemove.Count > 0)
         {
-            if (octree.toRemove.Count > 0 && chunkUpdateRequests.Count == 0 && chunksUpdating.Count == 0 && threadedMeshes.Count == 0)
+            for (int i = 0; i < 128; i++)
             {
-                OctreeNode nodeToRemove = octree.toRemove[octree.toRemove.Count - 1];
-                if (chunks.ContainsKey(nodeToRemove))
+                if (octree.toRemove.Count > 0 && chunkUpdateRequests.Count == 0 && chunksUpdating.Count == 0 && threadedMeshes.Count == 0)
                 {
-                    if (chunks[nodeToRemove].chunkGameObject != null) Destroy(chunks[nodeToRemove].chunkGameObject);
-                    //RemoveChunkRequest(octree.toRemove[0]);
-                    //Remove from the chunks array
-                    chunks.Remove(nodeToRemove);
-                    //Dequeue from the octree list
+                    OctreeNode nodeToRemove = octree.toRemove[octree.toRemove.Count - 1];
+                    if (chunks.ContainsKey(nodeToRemove))
+                    {
+                        if (chunks[nodeToRemove].chunkGameObject != null) Destroy(chunks[nodeToRemove].chunkGameObject);
+                        //RemoveChunkRequest(octree.toRemove[0]);
+                        //Remove from the chunks array
+                        chunks.Remove(nodeToRemove);
+                        //Dequeue from the octree list
+                    }
+                    octree.toRemove.RemoveAt(octree.toRemove.Count - 1);
                 }
-                octree.toRemove.RemoveAt(octree.toRemove.Count - 1);
             }
         }
 
-        //Get the mesh data from the other threads and make a unity mesh out of them
-        while (threadedMeshes.Count > 0)
+        if (!completed)
         {
-            KeyValuePair<Chunk, ChunkThreadedMesh> threadedMeshPair = threadedMeshes.First();
-            if (threadedMeshPair.Key.chunkGameObject != null)
-            {
-                Mesh mesh = new Mesh
-                {
-                    vertices = threadedMeshPair.Value.vertices,
-                    normals = threadedMeshPair.Value.normals,
-                    uv = threadedMeshPair.Value.uvs,
-                    colors = threadedMeshPair.Value.colors,
-                    triangles = threadedMeshPair.Value.triangles,
-                };
-                //mesh.RecalculateNormals();
-                ChunkThreadedMesh r;
-                threadedMeshes.TryRemove(threadedMeshPair.Key, out r);
-                chunksUpdating.Remove(threadedMeshPair.Key);
-                if (threadedMeshPair.Value.vertices.Length == 0)
-                {
-                    Destroy(threadedMeshPair.Key.chunkGameObject);
-                    continue;
-                }
-                threadedMeshPair.Key.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
-                threadedMeshPair.Key.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-                threadedMeshPair.Key.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
-            }
+
         }
     }
     //When we create a new chunk
@@ -408,6 +401,8 @@ public class VoxelWorld : MonoBehaviour
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);
+
+        
         nativeVoxels.CopyFrom(voxels);
         triangles.Clear();
         mcTriangles.Clear();
@@ -427,6 +422,7 @@ public class VoxelWorld : MonoBehaviour
 
         VertexMergingJob vmJob = new VertexMergingJob()
         {
+            lowpoly = lowpoly,
             mcTriangles = mcTriangles,
             vertices = vertices,
             normals = normals,
@@ -435,9 +431,24 @@ public class VoxelWorld : MonoBehaviour
             triangles = triangles,
         };
 
+        MeshingJob mJob = new MeshingJob()
+        {
+            lowpoly = lowpoly,
+            mcTriangles = mcTriangles,
+            vertices = vertices.AsParallelWriter(),
+            normals = normals.AsParallelWriter(),
+            colors = colors.AsParallelWriter(),
+            uvs = uvs.AsParallelWriter(),
+            triangles = triangles.AsParallelWriter(),
+        };
+
         JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
-        JobHandle vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
+        //marchingCubesHandle.Complete();
+        vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
+        currentChunk = chunk;
+        completed = false;
         vertexMergingHandle.Complete();
+        completed = true;
 
         //Create the mesh and update it
         Mesh mesh = new Mesh();
@@ -447,17 +458,16 @@ public class VoxelWorld : MonoBehaviour
         mesh.SetColors(colors.AsArray());
         mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
         ChunkThreadedMesh r;
-        threadedMeshes.TryRemove(chunk, out r);
-        chunksUpdating.Remove(chunk);
+        threadedMeshes.TryRemove(currentChunk, out r);
+        chunksUpdating.Remove(currentChunk);
         if (vertices.Length == 0)
         {
-            Destroy(chunk.chunkGameObject);
+            Destroy(currentChunk.chunkGameObject);
         }
-        chunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
-        chunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-        chunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
-
-        //AddThreadedMesh(chunk, new ChunkThreadedMesh() { vertices = vertices.to })
+        currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
+        currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
+        currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+        //JobHandle meshingHandle = mJob.Schedule(mcTriangles.Length, 64);
     }
     //If we already find a threaded mesh in the threadedMesh list, overwrite it
     private void AddThreadedMesh(Chunk chunk, ChunkThreadedMesh threadedMesh)

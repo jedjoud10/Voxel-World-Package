@@ -49,7 +49,7 @@ float Density(float3 p)
 float3 Color(float3 p, float3 lp, float3 n)
 {
     float3 color = animeTexture[(p.xz + 1024)*0.58];
-    color = lp;
+    color = saturate(p.y / 320);
     return color;
 }
 //The metallic function

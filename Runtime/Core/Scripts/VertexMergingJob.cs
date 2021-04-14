@@ -14,6 +14,7 @@ public struct VertexMergingJob : IJob
 {
     //Marching Cubes variables
     [ReadOnly] public NativeList<MeshTriangle> mcTriangles;
+    public bool lowpoly;
     //Mesh variables
     public NativeList<float3> vertices, normals;
     public NativeList<float4> colors;
@@ -23,7 +24,7 @@ public struct VertexMergingJob : IJob
     {
         int vertexCount = 0;
         NativeHashMap<float3, int> hashmap = new NativeHashMap<float3, int>(triangles.Length * 3, Allocator.Temp);
-        NativeList<int> map = new NativeList<int>(Allocator.Temp);
+        NativeList<int> map = new NativeList<int>(triangles.Length * 3, Allocator.Temp);
         for (int i = 0; i < mcTriangles.Length; i++)
         {
             for (int v = 0; v < 3; v++)
@@ -36,7 +37,7 @@ public struct VertexMergingJob : IJob
                     map.Add(vertices.Length);
                     vertices.Add(vert.position);
                     colors.Add(math.float4(vert.color, 1));
-                    normals.Add(vert.normal);
+                    normals.Add(lowpoly ? math.float3(1) : vert.normal);
                     uvs.Add(vert.uv);
                 }
                 else

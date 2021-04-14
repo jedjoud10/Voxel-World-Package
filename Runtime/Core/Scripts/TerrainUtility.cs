@@ -100,6 +100,15 @@ public static class TerrainUtility
     }
 
     /// <summary>
+    /// The camera that the octree could use to create/sort the nodes
+    /// </summary>
+    public struct CameraData 
+    {
+        public Vector3 position;
+        public Vector3 forwardVector;
+    }
+
+    /// <summary>
     /// A chunk that stores data about the world
     /// </summary>
     public struct Chunk
