@@ -24,10 +24,10 @@ public struct SkirtsJobX : IJobParallelFor
     //Static marching cubes skirts lookup tables variables
     private static readonly int3[,] edgesX = new int3[,]
     {
-            { math.int3(0, 0, 0), math.int3(0, 1, 0) },
-            { math.int3(0, 1, 0), math.int3(0, 1, 1) },
-            { math.int3(0, 1, 1), math.int3(0, 0, 1) },
-            { math.int3(0, 0, 1), math.int3(0, 0, 0) },
+            { new int3(0, 0, 0), new int3(0, 1, 0) },
+            { new int3(0, 1, 0), new int3(0, 1, 1) },
+            { new int3(0, 1, 1), new int3(0, 0, 1) },
+            { new int3(0, 0, 1), new int3(0, 0, 0) },
     };
     private static readonly int[,] edgesCornersX = new int[,]
     {
