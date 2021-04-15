@@ -39,8 +39,14 @@ float Density(float3 p)
     }
     cellularDensity /= maxv;
     cellularDensity *= 620;
-    //return p.y;
-    return (opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), opUnion(cellularDensity + p.y - 320, p.y)));
+
+    int2 dimensions;
+    animeTexture.GetDimensions(dimensions.x, dimensions.y);
+    float box = sdBox(p, float3(dimensions.x, 10, dimensions.y) / 2);
+    float3 color = animeTexture[(p.xz) + dimensions / 2];
+
+    //return p.y * 0.2 + (lerp(color, 0, saturate(box)) * 2) - 1;
+    //return (opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), opUnion(cellularDensity + p.y - 320, p.y)));
     float sphere = sdSphere(p, 5000);
     return opSmoothUnion(cellularDensity + sphere, sdSphere(p, 4850), 60);
     return cellularDensity + sphere;
@@ -48,9 +54,10 @@ float Density(float3 p)
 //The color function
 float3 Color(float3 p, float3 lp, float3 n)
 {
-    float3 color = animeTexture[(p.xz + 1024)*0.58];
-    color = saturate(p.y / 320);
-    return n;
+    float3 color = sin(p * 5);
+    //color = saturate(p.y / 320);
+    //return box;
+    return color;
 }
 //The metallic function
 float Metallic(float3 p, float3 n) 
