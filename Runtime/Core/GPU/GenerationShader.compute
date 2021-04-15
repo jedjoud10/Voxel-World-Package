@@ -48,13 +48,14 @@ float Density(float3 p)
     //return p.y * 0.2 + (lerp(color, 0, saturate(box)) * 2) - 1;
     //return (opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), opUnion(cellularDensity + p.y - 320, p.y)));
     float sphere = sdSphere(p, 5000);
-    return opSmoothUnion(cellularDensity + sphere, sdSphere(p, 4850), 60);
+    return opSmoothUnion(cellularDensity + sphere - 100, sdSphere(p, 4850), 60);
     return cellularDensity + sphere;
 }
 //The color function
 float3 Color(float3 p, float3 lp, float3 n)
 {
-    float3 color = sin(p * 5);
+    float3 color = 0;
+    color = dot(normalize(p), n);
     //color = saturate(p.y / 320);
     //return box;
     return color;

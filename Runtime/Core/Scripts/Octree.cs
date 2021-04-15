@@ -24,7 +24,6 @@ public class Octree
     /// <summary>
     /// Initialize the octree with a reference to the voxel world
     /// </summary>
-    /// <param name="_world"></param>
     public Octree(VoxelWorld voxelWorld)
     {
         maxHierarchyIndex = voxelWorld.maxHierarchyIndex;

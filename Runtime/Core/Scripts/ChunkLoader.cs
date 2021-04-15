@@ -17,7 +17,7 @@ public class ChunkLoader : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Time.frameCount % 20 == 0 && (Vector3.Distance(lastPosition, transform.position) > 1f || Time.frameCount < 21))
+        if (Time.frameCount % 20 == 0 && !voxelWorld.generating)
         {
             voxelWorld.octree.UpdateOctree(new TerrainUtility.CameraData() { position = transform.position, forwardVector = transform.forward });
             lastPosition = transform.position;

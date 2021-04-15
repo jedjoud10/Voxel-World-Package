@@ -188,3 +188,5 @@ public static class TerrainUtility
         }
     }
 }
+
+public class DensityObjects { }

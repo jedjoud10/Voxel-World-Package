@@ -44,7 +44,7 @@ public class VoxelWorld : MonoBehaviour
     public Dictionary<OctreeNode, Chunk> chunks;
     public Octree octree;
     public VoxelEditsManager voxelEditsManager;
-    public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
+    public bool generating;
 
     //GPU-CPU Stuff
     private ComputeBuffer buffer;
@@ -59,6 +59,7 @@ public class VoxelWorld : MonoBehaviour
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
     public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
+    public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
 
     //Job system stuff
@@ -119,6 +120,7 @@ public class VoxelWorld : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        generating = chunkUpdateRequests.Count > 0 || octree.toAdd.Count > 0 || octree.toRemove.Count > 0 || chunksUpdating.Count > 0;
         //Generate a single mesh
         if (chunkUpdateRequests.Count > 0 && completed)
         {
