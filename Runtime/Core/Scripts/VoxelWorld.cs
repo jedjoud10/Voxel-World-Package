@@ -44,6 +44,7 @@ public class VoxelWorld : MonoBehaviour
     public Dictionary<OctreeNode, Chunk> chunks;
     public Octree octree;
     public VoxelEditsManager voxelEditsManager;
+    [HideInInspector]
     public bool generating;
 
     //GPU-CPU Stuff
@@ -249,7 +250,6 @@ public class VoxelWorld : MonoBehaviour
         generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
         generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
         generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.4f));
-        generationShader.SetFloat("quality", 1);
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);
@@ -299,7 +299,6 @@ public class VoxelWorld : MonoBehaviour
         vertexMergingHandle = vmJob.Schedule(JobHandle.CombineDependencies(skirtsHandle, marchingCubesHandle));
         currentChunk = chunk;
         completed = false;       
-        //JobHandle meshingHandle = mJob.Schedule(mcTriangles.Length, 64);
     }
     /// <summary>
     /// Draw some gizmos

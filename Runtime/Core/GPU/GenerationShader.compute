@@ -1,11 +1,7 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel VoxelMain
 #pragma kernel VoxelNormal
-#include "./GenerationShaders/Others/SDFFunctions.cginc"
-#include "./GenerationShaders/Others/noises/base.cginc"
-#include "./GenerationShaders/Others/noises/cellular3D.cginc"
-#include "./GenerationShaders/Others/noises/noise3D.cginc"
-#include "./GenerationShaders/Others/noises/erosionnoise.cginc"
+#include "./GenerationShaders/ExampleGenerator.cginc"
 
 //Base values
 float3 offset;
@@ -25,51 +21,6 @@ struct Voxel
 };
 RWStructuredBuffer<Voxel> buffer;
 RWTexture2D<float3> animeTexture;
-//P: 3D Point
-//N: Normal
-//The density function
-float Density(float3 p) 
-{
-    float cellularDensity = 0;
-    float maxv = 0;
-    for (int i = 0; i < 4 * quality; i++)
-    {
-        cellularDensity += (1 - cellular(p * pow(2, i) * 0.002)) * pow(0.5, i);
-        maxv += pow(0.5, i);
-    }
-    cellularDensity /= maxv;
-    cellularDensity *= 620;
-
-    int2 dimensions;
-    animeTexture.GetDimensions(dimensions.x, dimensions.y);
-    float box = sdBox(p, float3(dimensions.x, 10, dimensions.y) / 2);
-    float3 color = animeTexture[(p.xz) + dimensions / 2];
-
-    //return p.y * 0.2 + (lerp(color, 0, saturate(box)) * 2) - 1;
-    //return (opUnion(opSubtraction(sdBox(p, float3(100, 100, 100)), sdSphere(p, 110)), opUnion(cellularDensity + p.y - 320, p.y)));
-    float sphere = sdSphere(p, 5000);
-    return opSmoothUnion(cellularDensity + sphere - 100, sdSphere(p, 4850), 60);
-    return cellularDensity + sphere;
-}
-//The color function
-float3 Color(float3 p, float3 lp, float3 n)
-{
-    float3 color = 0;
-    color = dot(normalize(p), n);
-    //color = saturate(p.y / 320);
-    //return box;
-    return color;
-}
-//The metallic function
-float Metallic(float3 p, float3 n) 
-{
-    return 0;
-}
-//The Smoothness function
-float Smoothness(float3 p, float3 n)
-{
-    return 0;
-}
 int flt(uint3 pos) { return (pos.z * resolution * resolution) + (pos.y * resolution) + pos.x; }
 
 [numthreads(8,8,8)]
@@ -78,7 +29,7 @@ void VoxelMain(uint3 id : SV_DispatchThreadID)
     float3 p = (id * chunkScaling + offset) * scale;
     
     Voxel voxel;
-    voxel.density = Density(p);
+    voxel.density = Density(p, id / (float)resolution);
     voxel.normal = 1;
     voxel.color = 1;
     voxel.metallic = 0;
@@ -100,7 +51,7 @@ void VoxelNormal(uint3 id : SV_DispatchThreadID)
 
     voxel.normal = normal;
     voxel.color = Color(p, id / (float)resolution, normal);
-    voxel.metallic = Metallic(p, normal);
-    voxel.smoothness = Smoothness(p, normal);
+    voxel.metallic = Metallic(p, id / (float)resolution, normal);
+    voxel.smoothness = Smoothness(p, id / (float)resolution, normal);
     buffer[index] = voxel;
 }
