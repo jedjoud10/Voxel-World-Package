@@ -15,8 +15,8 @@ public struct MarchingCubesJob : IJobParallelFor
     //Marching cubes variables
     private const int resolution = VoxelWorld.resolution;
     public float chunkSize;
-    public float isolevel;
-    public NativeList<MeshTriangle>.ParallelWriter triangles;
+    public float isolevel;    
+    public NativeList<MeshTriangle>.ParallelWriter mcTriangles;
     [ReadOnly] public NativeArray<Voxel> voxels;
 
     //Static marching cubes lookup tables variables
@@ -388,7 +388,7 @@ public struct MarchingCubesJob : IJobParallelFor
                         uv = math.lerp(math.float2(a.smoothness, a.metallic), math.float2(b.smoothness, b.metallic), lerpValue)
                     };
                 }
-                triangles.AddNoResize(triangle);
+                mcTriangles.AddNoResize(triangle);
             }
         }
     }

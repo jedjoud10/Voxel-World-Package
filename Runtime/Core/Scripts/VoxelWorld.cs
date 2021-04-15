@@ -22,6 +22,8 @@ public class VoxelWorld : MonoBehaviour
     public bool lowpoly;
     public Material normalMaterial;
     public Material lowpolyMaterial;
+    [Range(0, 5)]
+    public int targetFrameDelay = 5;
 
     [Header("Octree options")]
     [Range(1, 24)]
@@ -46,7 +48,6 @@ public class VoxelWorld : MonoBehaviour
 
     //GPU-CPU Stuff
     private ComputeBuffer buffer;
-    private ComputeBuffer buffer1;
     private Voxel[] voxels = new Voxel[resolution * resolution * resolution];
     private NativeArray<Voxel> nativeVoxels;
     private NativeList<MeshTriangle> mcTriangles;
@@ -59,41 +60,11 @@ public class VoxelWorld : MonoBehaviour
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
     public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
 
+
     //Job system stuff
     private JobHandle vertexMergingHandle;
     private Chunk currentChunk;
     private bool completed = true;
-
-    //Marching squares edge and corner tables
-    private readonly Vector3[,] edgesY = new Vector3[,]
-    {
-        { new Vector3(0, 0, 0), new Vector3(1, 0, 0) },
-        { new Vector3(1, 0, 0), new Vector3(1, 0, 1) },
-        { new Vector3(1, 0, 1), new Vector3(0, 0, 1) },
-        { new Vector3(0, 0, 1), new Vector3(0, 0, 0) },
-    };
-    private readonly int[,] edgesCornersY = new int[,]
-    {
-        { 0, 1 },
-        { 1, resolution * resolution + 1 },
-        { resolution * resolution + 1, resolution * resolution },
-        { resolution * resolution, 0 },
-    };
-
-    private readonly Vector3[,] edgesZ = new Vector3[,]
-    {
-        { new Vector3(0, 0, 0), new Vector3(0, 1, 0) },
-        { new Vector3(0, 1, 0), new Vector3(1, 1, 0) },
-        { new Vector3(1, 1, 0), new Vector3(1, 0, 0) },
-        { new Vector3(1, 0, 0), new Vector3(0, 0, 0) },
-    };
-    private readonly int[,] edgesCornersZ = new int[,]
-    {
-        { 0, resolution },
-        { resolution, resolution + 1 },
-        { resolution + 1, 1 },
-        { 1, 0 },
-    };
     #endregion
     // Start is called before the first frame update
     void Start()
@@ -107,7 +78,7 @@ public class VoxelWorld : MonoBehaviour
         chunksUpdating = new HashSet<Chunk>();
 
         //Setup first time compute shader stuff
-        RenderTexture rt = new RenderTexture(2048, 1024, 0);
+        RenderTexture rt = new RenderTexture(texture.width, texture.height, 0);
         rt.enableRandomWrite = true;
         RenderTexture.active = rt;
         rt.wrapMode = TextureWrapMode.Clamp;
@@ -132,6 +103,7 @@ public class VoxelWorld : MonoBehaviour
         uvs = new NativeList<float2>(mcTriangles.Capacity * 3, Allocator.Persistent);
         triangles = new NativeList<int>(mcTriangles.Capacity * 3, Allocator.Persistent);
     }
+    // Called when this gameObject gets destroyed
     private void OnDestroy()
     {
         //Release everything
@@ -147,15 +119,14 @@ public class VoxelWorld : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Generate a mesh for the new chunks
-        //Generate the chunks from the requests
-        if (chunkUpdateRequests.Count > 0 && Time.frameCount % 3 == 0 && completed)
+        //Generate a single mesh
+        if (chunkUpdateRequests.Count > 0 && completed)
         {
             KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.First();
             GenerateMesh(request.Value.chunk, request.Key);
             chunkUpdateRequests.Remove(request.Key);
         }
-
+        
         //Create the chunks
         if (octree.toAdd.Count > 0)
         {
@@ -197,7 +168,8 @@ public class VoxelWorld : MonoBehaviour
             }
         }
 
-        if (!completed && Time.frameCount % 3 == 2)
+        //Complete the job after a small delay, or no delay at all
+        if (!completed && vertexMergingHandle.IsCompleted && Time.frameCount % targetFrameDelay == 0)
         {
             vertexMergingHandle.Complete();
             completed = true;
@@ -221,7 +193,22 @@ public class VoxelWorld : MonoBehaviour
             currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
         }
     }
-    //When we create a new chunk
+    /// <summary>
+    /// Remap value from one range to another. https://forum.unity.com/threads/re-map-a-number-from-one-range-to-another.119437/
+    /// </summary>
+    /// <param name="value">Value to remap</param>
+    /// <param name="from1">Start 1</param>
+    /// <param name="to1">End 1</param>
+    /// <param name="from2">Start 2</param>
+    /// <param name="to2">End 2</param>
+    /// <returns></returns>
+    public static float Remap(float value, float from1, float to1, float from2, float to2)
+    {
+        return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
+    }
+    /// <summary>
+    /// We want to create a new chunk
+    /// </summary>
     public Chunk CreateNewChunk(OctreeNode octreeNode)
     {
         //return;return newChunk;
@@ -248,163 +235,18 @@ public class VoxelWorld : MonoBehaviour
             chunkUpdateRequests.Add(octreeNode, new ChunkUpdateRequest() { chunk = newChunk, priority = octreeNode.hierarchyIndex });
             return newChunk;
         }
-    }
-    //Create the mesh of the chunk in another thread
-    private void MarchingCubesWithSkirtsMultithreaded(object state)
-    {
-        //2. Generate the mesh from the data in another thread
-        Voxel[] localVoxels = (Voxel[])((object[])state)[0];
-        OctreeNode node = (OctreeNode)((object[])state)[1];
-        Chunk chunk = (Chunk)((object[])state)[2];
-        List<int> triangles = new List<int>();
-        List<Vector3> vertices = new List<Vector3>();
-        List<Color> colors = new List<Color>();
-        List<Vector3> normals = new List<Vector3>();
-        //UVs: X = Smoothness, Y = Metallic
-        List<Vector2> uvs = new List<Vector2>();
-        Vector2 currentUV;
-
-        List<int> map = new List<int>();
-        Dictionary<Vector3, int> hashmap = new Dictionary<Vector3, int>();
-        int vertexCount = 0;
-        for (int z = 0, i; z < resolution - 3; z++)
-        {
-            for (int y = 0; y < resolution - 3; y++)
-            {
-                for (int x = 0; x < resolution - 3; x++)
-                {
-                    
-                }
-            }
-        }
-        //Skirts 
-
-        //X Axis
-        float reductionFactorChunkScaled = (node.chunkSize / (float)(resolution - 3));
-        /*
-        CreateSkirtX(0, true);
-        CreateSkirtX(resolution - 3, false);
-        //Y Axis
-        CreateSkirtY(0, false);
-        CreateSkirtY(resolution - 3, true);
-        //Z Axis
-        CreateSkirtZ(0, false);
-        CreateSkirtZ(resolution - 3, true);
-        */
-        /*
-        void CreateSkirtX(int slicePoint, bool flip)
-        {
-
-        }
-        void CreateSkirtY(int slicePoint, bool flip)
-        {
-            for (int z = 0; z < resolution - 3; z++)
-            {
-                for (int x = 0; x < resolution - 3; x++)
-                {
-                    int i = TerrainUtility.FlattenIndex(new Vector3Int(x+1, slicePoint+1, z+1), resolution);
-                    //Indexing
-                    int msCase = 0;
-                    if (localVoxels[i].density < 0) msCase |= 1;
-                    if (localVoxels[i + resolution * resolution].density < 0) msCase |= 2;
-                    if (localVoxels[i + resolution * resolution + 1].density < 0) msCase |= 4;
-                    if (localVoxels[i + 1].density < 0) msCase |= 8;
-                    //Get the corners
-                    SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, slicePoint, z) * reductionFactorChunkScaled);
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution * resolution], new Vector3(x + 1, slicePoint, z) * reductionFactorChunkScaled);
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution * resolution + 1], new Vector3(x + 1, slicePoint, z + 1) * reductionFactorChunkScaled);
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x, slicePoint, z + 1) * reductionFactorChunkScaled);
-                    //Get each edge's skirtVoxel
-                    SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
-                    //Run on each edge
-                    for (int e = 0; e < 4; e++)
-                    {
-                        Voxel a = localVoxels[i + edgesCornersY[e, 0]];
-                        Voxel b = localVoxels[i + edgesCornersY[e, 1]];
-                        float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesY[e, 0], edgesY[e, 1], lerpValue) + new Vector3(x, slicePoint, z)) * reductionFactorChunkScaled);
-                    }
-                    SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
-                }
-            }
-        }
-        void CreateSkirtZ(int slicePoint, bool flip)
-        {
-            for (int y = 0; y < resolution - 3; y++)
-            {
-                for (int x = 0; x < resolution - 3; x++)
-                {
-                    int i = TerrainUtility.FlattenIndex(new Vector3Int(x+1, y+1, slicePoint+1), resolution);
-                    //Indexing
-                    int msCase = 0;
-                    if (localVoxels[i].density < 0) msCase |= 1;
-                    if (localVoxels[i + 1].density < 0) msCase |= 2;
-                    if (localVoxels[i + resolution + 1].density < 0) msCase |= 4;
-                    if (localVoxels[i + resolution].density < 0) msCase |= 8;
-                    //Get the corners
-                    SkirtVoxel[] cornerVoxels = new SkirtVoxel[4];
-                    cornerVoxels[0] = new SkirtVoxel(localVoxels[i], new Vector3(x, y, slicePoint) * reductionFactorChunkScaled);
-                    cornerVoxels[1] = new SkirtVoxel(localVoxels[i + resolution], new Vector3(x, y + 1, slicePoint) * reductionFactorChunkScaled);
-                    cornerVoxels[2] = new SkirtVoxel(localVoxels[i + resolution + 1], new Vector3(x + 1, y + 1, slicePoint) * reductionFactorChunkScaled);
-                    cornerVoxels[3] = new SkirtVoxel(localVoxels[i + 1], new Vector3(x + 1, y, slicePoint) * reductionFactorChunkScaled);
-                    //Get each edge's skirtVoxel
-                    SkirtVoxel[] edgeMiddleVoxels = new SkirtVoxel[4];
-                    //Run on each edge
-                    for (int e = 0; e < 4; e++)
-                    {
-                        Voxel a = localVoxels[i + edgesCornersZ[e, 0]];
-                        Voxel b = localVoxels[i + edgesCornersZ[e, 1]];
-                        float lerpValue = Mathf.InverseLerp(a.density, b.density, isolevel);
-                        edgeMiddleVoxels[e] = new SkirtVoxel(a, b, lerpValue, (Vector3.Lerp(edgesZ[e, 0], edgesZ[e, 1], lerpValue) + new Vector3(x, y, slicePoint)) * reductionFactorChunkScaled);
-                    }
-                    SolveMarchingSquareCase(msCase, cornerVoxels, edgeMiddleVoxels, flip);
-                }
-            }
-        }
-        
-        //Add a single trianle to the mesh (Used for skirts)
-        void AddTriangle(SkirtVoxel a, SkirtVoxel b, SkirtVoxel c, bool flip)
-        {
-            TryAddSkirtVertex(flip ? b : a);
-            TryAddSkirtVertex(flip ? a : b);
-            TryAddSkirtVertex(c);
-            vertexCount += 3;
-            triangles.Add(map[vertexCount - 3]);
-            triangles.Add(map[vertexCount - 2]);
-            triangles.Add(map[vertexCount - 1]);
-        }
-        //Add a single vertex to the mesh (Also used for skirts)
-        void TryAddSkirtVertex(SkirtVoxel skirtVoxel)
-        {
-            if (!hashmap.ContainsKey(skirtVoxel.pos))
-            {
-                //First time we generate this vertex
-                hashmap.Add(skirtVoxel.pos, vertices.Count);
-                map.Add(vertices.Count);
-                vertices.Add(skirtVoxel.pos);
-                normals.Add(skirtVoxel.normal);
-                colors.Add(new Color(skirtVoxel.color.x, skirtVoxel.color.y, skirtVoxel.color.z));
-                currentUV.x = skirtVoxel.smoothness;
-                currentUV.y = skirtVoxel.metallic;
-                uvs.Add(currentUV);
-            }
-            else
-            {
-                //Reuse the vertex
-                map.Add(hashmap[skirtVoxel.pos]);
-            }
-        }
-    */
-    }
-    //Generate the mesh for a specific chunk    
+    }    
+    
+    /// <summary>
+    /// Generate the mesh for a specific chunk
+    /// </summary>
     public void GenerateMesh(Chunk chunk, OctreeNode node)
     {
         //1. Generate the data (density, rgb color, roughness, metallic) for the meshing        
         Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
         generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
         generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
-        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.5f));
+        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.4f));
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);
@@ -422,7 +264,16 @@ public class VoxelWorld : MonoBehaviour
         {
             chunkSize = node.chunkSize,
             isolevel = isolevel,
-            triangles = mcTriangles.AsParallelWriter(),
+            mcTriangles = mcTriangles.AsParallelWriter(),
+            voxels = nativeVoxels
+        };
+        //Skirts
+        SkirtsJob skirtsJob = new SkirtsJob()
+        {
+            chunkSize = node.chunkSize,
+            isolevel = isolevel,
+            reductionFactorChunkScaled = (node.chunkSize / (float)(resolution - 3)),
+            mcTriangles = mcTriangles.AsParallelWriter(),
             voxels = nativeVoxels
         };
 
@@ -439,10 +290,37 @@ public class VoxelWorld : MonoBehaviour
 
         JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
         //marchingCubesHandle.Complete();
-        vertexMergingHandle = vmJob.Schedule(marchingCubesHandle);
+
+        JobHandle skirtsHandle = skirtsJob.Schedule((resolution - 3) * (resolution - 3) * 6, 128, marchingCubesHandle);
+
+        vertexMergingHandle = vmJob.Schedule(JobHandle.CombineDependencies(skirtsHandle, marchingCubesHandle));
         currentChunk = chunk;
         completed = false;       
         //JobHandle meshingHandle = mJob.Schedule(mcTriangles.Length, 64);
+    }
+    /// <summary>
+    /// Draw some gizmos
+    /// </summary>
+    private void OnDrawGizmos()
+    {
+        if (octree != null)
+        {
+            Gizmos.color = Color.green;
+            foreach (var node in octree.toAdd)
+            {
+                Gizmos.DrawWireCube(node.chunkPosition + new Vector3(node.chunkSize / 2f, node.chunkSize / 2f, node.chunkSize / 2f), new Vector3(node.chunkSize, node.chunkSize, node.chunkSize));
+            }
+            Gizmos.color = Color.red;
+            foreach (var node in octree.toRemove)
+            {
+                Gizmos.DrawWireCube(node.chunkPosition + new Vector3(node.chunkSize / 2f, node.chunkSize / 2f, node.chunkSize / 2f), new Vector3(node.chunkSize, node.chunkSize, node.chunkSize));
+            }
+            if (chunkUpdateRequests.Count > 0)
+            {
+                Gizmos.DrawWireCube(chunkUpdateRequests.First().Key.chunkPosition + new Vector3(chunkUpdateRequests.First().Key.chunkSize / 2f, chunkUpdateRequests.First().Key.chunkSize / 2f, chunkUpdateRequests.First().Key.chunkSize / 2f), new Vector3(chunkUpdateRequests.First().Key.chunkSize, chunkUpdateRequests.First().Key.chunkSize, chunkUpdateRequests.First().Key.chunkSize));
+            }
+            //Gizmos.DrawWireCube(octree.toRemove[index].center, new Vector3(octree.toRemove[index].size, octree.toRemove[index].size, octree.toRemove[index].size));
+        }
     }
     //Show some debug info
     private void OnGUI()

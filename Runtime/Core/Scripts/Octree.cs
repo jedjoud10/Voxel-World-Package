@@ -10,40 +10,56 @@ using static TerrainUtility;
 /// </summary>
 public class Octree
 {
-    public List<OctreeNode> nodes;//All the nodes we have in the octree
-    public List<OctreeNode> toAdd, toRemove;//The nodes we added/removed from last's frame octree
-    private Dictionary<OctreeNode, OctreeNodeChildrenCarrier> nodesChildrenCarrier;//A dictionary containting all the children of specific nodes
-    private VoxelWorld voxelWorld;//Reference to voxelWorld
-    public int maxHierarchyIndex;//The max hierarchy index allowed in the octree and the resolution of the chunks
+    //Main octree variables
+    public List<OctreeNode> nodes;
+    public List<OctreeNode> toAdd, toRemove;
+    private Dictionary<OctreeNode, OctreeNodeChildrenCarrier> nodesChildrenCarrier;
+    private VoxelWorld voxelWorld;
+    public int maxHierarchyIndex;
     private struct OctreeNodeChildrenCarrier
     {
         public int[] children;
     }
-    //Initialize octree
-    public Octree(VoxelWorld _world)
+
+    /// <summary>
+    /// Initialize the octree with a reference to the voxel world
+    /// </summary>
+    /// <param name="_world"></param>
+    public Octree(VoxelWorld voxelWorld)
     {
-        maxHierarchyIndex = _world.maxHierarchyIndex;
+        maxHierarchyIndex = voxelWorld.maxHierarchyIndex;
         nodes = new List<OctreeNode>();
         toAdd = new List<OctreeNode>();
         toRemove = new List<OctreeNode>();
         nodesChildrenCarrier = new Dictionary<OctreeNode, OctreeNodeChildrenCarrier>();
-        voxelWorld = _world;
+        this.voxelWorld = voxelWorld;
     }
 
-    //Create a new octree, and find the differences between this octree and last's frame octree
+    /// <summary>
+    /// Create a new octree, and find the differences between this octree and last's frame octree
+    /// </summary>
+    /// <param name="cameraData">CameraData that you pass to the octree. Ex: Position and ForwardVector</param>
     public void UpdateOctree(CameraData cameraData)
     {
         //CreateOctreeThreaded(new object[] { _cameraPosition });
         ThreadPool.QueueUserWorkItem(CreateOctreeThreaded, new object[] { cameraData });
     }
-    //Checks what nodes we need to edit
+
+    /// <summary>
+    /// Checks what nodes we need to edit. W.I.P
+    /// </summary>
+    /// <param name="voxelEditRequestBatch">A request batch to edit the terrain with</param>
     public void CheckNodesToEdit(VoxelEditRequestBatch voxelEditRequestBatch)
     {
         //CheckNodesToEditThreaded(new object[] { voxelEditRequest });
         //CheckNodesToEditThreaded(new object[] { (center - new Vector3(size / 2, size / 2, size / 2)), (center + new Vector3(size / 2, size / 2, size / 2)) });
         ThreadPool.QueueUserWorkItem(CheckNodesToEditThreaded, new object[] { voxelEditRequestBatch });
     }
-    //Create the octree and all in another thread
+
+    /// <summary>
+    /// Create the octree and all in another thread
+    /// </summary>
+    /// <param name="state">State passed from main thread</param>
     public void CreateOctreeThreaded(object state)
     {
         Dictionary<OctreeNode, int> localNodeIndexPointers = new Dictionary<OctreeNode, int>();
@@ -130,14 +146,21 @@ public class Octree
             nodes = newNodes;//Update octree
         }
     }
-    //Request intersection test
+
+    /// <summary>
+    /// Request intersection test
+    /// </summary>
     public bool NodeIntersectWithBounds(OctreeNode node, VoxelAABBBound bounds)
     {
         return (node.chunkPosition.x <= bounds.max.x && node.chunkPosition.x + node.chunkSize >= bounds.min.x) &&
                (node.chunkPosition.y <= bounds.max.y && node.chunkPosition.y + node.chunkSize >= bounds.min.y) &&
                (node.chunkPosition.z <= bounds.max.z && node.chunkPosition.z + node.chunkSize >= bounds.min.z);
     }
-    //Checks what nodes we need to edit in another thread
+
+    /// <summary>
+    /// Checks what nodes we need to edit in another thread
+    /// </summary>
+    /// <param name="state">State passed from main thread</param>
     public void CheckNodesToEditThreaded(object state)
     {
         VoxelEditRequestBatch voxelEditRequestBatch = (VoxelEditRequestBatch)((object[])state)[0];
@@ -196,13 +219,4 @@ public class Octree
             }
         }
     }
-}
-//A singular octree node
-public struct OctreeNode
-{
-    public int hierarchyIndex, size;
-    public Vector3Int position;
-    public Vector3 chunkPosition;
-    public float chunkSize;
-    public bool isLeaf;
 }

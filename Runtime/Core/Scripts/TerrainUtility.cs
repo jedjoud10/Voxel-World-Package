@@ -119,6 +119,18 @@ public static class TerrainUtility
     }
 
     /// <summary>
+    /// A singular octree node
+    /// </summary>
+    public struct OctreeNode
+    {
+        public int hierarchyIndex, size;
+        public Vector3Int position;
+        public Vector3 chunkPosition;
+        public float chunkSize;
+        public bool isLeaf;
+    }
+
+    /// <summary>
     /// A chunk update request that will be used to update / generate the mesh for a chunk
     /// </summary>
     public struct ChunkUpdateRequest
