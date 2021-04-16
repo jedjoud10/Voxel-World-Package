@@ -1,9 +1,9 @@
 {
   "name": "com.jedjoud.voxelworld",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Voxel World",
   "description": "A voxel package to create endless worlds!",
-  "unity": "2020.3",
+  "unity": "2021.1",
   "keywords": [
     "voxel",
     "terrain"
