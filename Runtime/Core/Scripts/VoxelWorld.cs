@@ -38,7 +38,6 @@ public class VoxelWorld : MonoBehaviour
 
     //Other stuff
     #region Some hellish fire bellow
-    private ConcurrentDictionary<Chunk, ChunkThreadedMesh> threadedMeshes;
     public Dictionary<OctreeNode, ChunkUpdateRequest> chunkUpdateRequests;
     public HashSet<Chunk> chunksUpdating;
     public Dictionary<OctreeNode, Chunk> chunks;
@@ -59,7 +58,7 @@ public class VoxelWorld : MonoBehaviour
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
+    public const int resolution = 64;//The resolution of each chunk> Can either be 8-16-32-64
     public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
 
@@ -67,6 +66,7 @@ public class VoxelWorld : MonoBehaviour
     private JobHandle vertexMergingHandle;
     private Chunk currentChunk;
     private bool completed = true;
+    private int frameCountSinceLast;
     #endregion
     // Start is called before the first frame update
     void Start()
@@ -75,7 +75,6 @@ public class VoxelWorld : MonoBehaviour
         octree = new Octree(this);
         voxelEditsManager = new VoxelEditsManager(this);
         chunks = new Dictionary<OctreeNode, Chunk>();
-        threadedMeshes = new ConcurrentDictionary<Chunk, ChunkThreadedMesh>();
         chunkUpdateRequests = new Dictionary<OctreeNode, ChunkUpdateRequest>();
         chunksUpdating = new HashSet<Chunk>();
 
@@ -109,6 +108,7 @@ public class VoxelWorld : MonoBehaviour
     private void OnDestroy()
     {
         //Release everything
+        vertexMergingHandle.Complete();
         buffer.Release();
         nativeVoxels.Dispose();
         mcTriangles.Dispose();
@@ -128,6 +128,7 @@ public class VoxelWorld : MonoBehaviour
             KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.First();
             GenerateMesh(request.Value.chunk, request.Key);
             chunkUpdateRequests.Remove(request.Key);
+            frameCountSinceLast = 0;
         }
         
         //Create the chunks
@@ -155,7 +156,7 @@ public class VoxelWorld : MonoBehaviour
         {
             for (int i = 0; i < 128; i++)
             {
-                if (octree.toRemove.Count > 0 && chunkUpdateRequests.Count == 0 && chunksUpdating.Count == 0 && threadedMeshes.Count == 0)
+                if (octree.toRemove.Count > 0 && chunkUpdateRequests.Count == 0 && chunksUpdating.Count == 0)
                 {
                     OctreeNode nodeToRemove = octree.toRemove[octree.toRemove.Count - 1];
                     if (chunks.ContainsKey(nodeToRemove))
@@ -172,7 +173,7 @@ public class VoxelWorld : MonoBehaviour
         }
 
         //Complete the job after a small delay, or no delay at all
-        if (!completed && vertexMergingHandle.IsCompleted && Time.frameCount % targetFrameDelay == 0)
+        if (!completed && (vertexMergingHandle.IsCompleted && frameCountSinceLast > targetFrameDelay))
         {
             vertexMergingHandle.Complete();
             completed = true;
@@ -184,8 +185,6 @@ public class VoxelWorld : MonoBehaviour
             mesh.SetUVs(0, uvs.AsArray());
             mesh.SetColors(colors.AsArray());
             mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
-            ChunkThreadedMesh r;
-            threadedMeshes.TryRemove(currentChunk, out r);
             chunksUpdating.Remove(currentChunk);
             if (vertices.Length == 0)
             {
@@ -195,6 +194,8 @@ public class VoxelWorld : MonoBehaviour
             currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
             currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
         }
+
+        frameCountSinceLast++;
     }
     /// <summary>
     /// Remap value from one range to another. https://forum.unity.com/threads/re-map-a-number-from-one-range-to-another.119437/
@@ -308,12 +309,8 @@ public class VoxelWorld : MonoBehaviour
         if (octree != null)
         {
             Gizmos.color = Color.green;
-            foreach (var node in octree.toAdd)
-            {
-                Gizmos.DrawWireCube(node.chunkPosition + new Vector3(node.chunkSize / 2f, node.chunkSize / 2f, node.chunkSize / 2f), new Vector3(node.chunkSize, node.chunkSize, node.chunkSize));
-            }
             Gizmos.color = Color.red;
-            foreach (var node in octree.toRemove)
+            foreach (var node in octree.nodes)
             {
                 Gizmos.DrawWireCube(node.chunkPosition + new Vector3(node.chunkSize / 2f, node.chunkSize / 2f, node.chunkSize / 2f), new Vector3(node.chunkSize, node.chunkSize, node.chunkSize));
             }
@@ -331,7 +328,6 @@ public class VoxelWorld : MonoBehaviour
         GUILayout.Label("Nodes in total: " + octree.nodes.Count);
         GUILayout.Label("Nodes to add: " + octree.toAdd.Count);
         GUILayout.Label("Chunks generating: " + chunksUpdating.Count);
-        GUILayout.Label("Meshes in other threads: " + threadedMeshes.Count);
         GUILayout.Label("Chunk update requests: " + chunkUpdateRequests.Count);
         GUILayout.Label("Voxel edit requests: " + voxelEditsManager.voxelEditRequestBatches.Count);
         GUILayout.EndVertical();

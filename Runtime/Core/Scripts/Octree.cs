@@ -40,7 +40,7 @@ public class Octree
     /// <param name="cameraData">CameraData that you pass to the octree. Ex: Position and ForwardVector</param>
     public void UpdateOctree(CameraData cameraData)
     {
-        //CreateOctreeThreaded(new object[] { _cameraPosition });
+        //CreateOctreeThreaded(new object[] { cameraData });
         ThreadPool.QueueUserWorkItem(CreateOctreeThreaded, new object[] { cameraData });
     }
 
@@ -91,6 +91,7 @@ public class Octree
             int[] childrenPointers = new int[8];
             if (Vector3.Distance(cameraData.position, octreeParentNode.chunkPosition + new Vector3(octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f)) < (octreeParentNode.chunkSize + voxelWorld.LODBias) && octreeParentNode.hierarchyIndex < maxHierarchyIndex)
             {
+                bool added = true;
                 for (int x = 0; x < 2; x++)
                 {
                     for (int y = 0; y < 2; y++)
@@ -111,15 +112,19 @@ public class Octree
                             childrenPointers[childrenIndex] = newNodes.Count;
                             localNodeIndexPointers.Add(octreeChild, newNodes.Count);
                             nodesToProcess.Add(octreeChild);
-                            newNodes.Add(octreeChild);
+                            added = BoundCheckOptimization.CheckNode(octreeParentNode);
+                            if(added) newNodes.Add(octreeChild);
                             childrenIndex++;
                         }
                     }
                 }
-                int index = localNodeIndexPointers[octreeParentNode];
-                newNodes.RemoveAt(index);
-                octreeParentNode.isLeaf = false;
-                newNodes.Insert(index, octreeParentNode);
+                if (added)
+                {
+                    int index = localNodeIndexPointers[octreeParentNode];
+                    newNodes.RemoveAt(index);
+                    octreeParentNode.isLeaf = false;
+                    newNodes.Insert(index, octreeParentNode);
+                }
                 //newNodes.Add(octreeParentNode);
             }
             localChildrenCarriers.Add(octreeParentNode, new OctreeNodeChildrenCarrier { children = childrenPointers });
@@ -144,16 +149,6 @@ public class Octree
             nodesChildrenCarrier = localChildrenCarriers;
             nodes = newNodes;//Update octree
         }
-    }
-
-    /// <summary>
-    /// Request intersection test
-    /// </summary>
-    public bool NodeIntersectWithBounds(OctreeNode node, VoxelAABBBound bounds)
-    {
-        return (node.chunkPosition.x <= bounds.max.x && node.chunkPosition.x + node.chunkSize >= bounds.min.x) &&
-               (node.chunkPosition.y <= bounds.max.y && node.chunkPosition.y + node.chunkSize >= bounds.min.y) &&
-               (node.chunkPosition.z <= bounds.max.z && node.chunkPosition.z + node.chunkSize >= bounds.min.z);
     }
 
     /// <summary>

@@ -1,18 +1,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-public class BoundCheckOptimization : MonoBehaviour
+using static TerrainUtility;
+/// <summary>
+/// Checks if a specific octree node touches the surface, if not then ignore it
+/// </summary>
+public static class BoundCheckOptimization
 {
-    // Start is called before the first frame update
-    void Start()
+    /// <summary>
+    /// If this returns true, then that means that node does intersect the surface and we should generate it
+    /// </summary>
+    /// <param name="node"></param>
+    /// <returns></returns>
+    public static bool CheckNode(OctreeNode node) 
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        return NodeIntersectWithBounds(node, new VoxelAABBBound() { min = new Vector3(-50000, -1, -50000), max = new Vector3(50000, 1, 50000) });
+        return node.chunkPosition.y < 50 && node.chunkPosition.y > -90;
     }
 }

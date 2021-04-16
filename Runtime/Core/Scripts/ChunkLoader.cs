@@ -7,7 +7,6 @@ public class ChunkLoader : MonoBehaviour
 {
     //How many chunks we should load in the x y z axis
     private VoxelWorld voxelWorld;
-    private Vector3 lastPosition = Vector3.positiveInfinity;
     // Start is called before the first frame update
     void Start()
     {
@@ -20,7 +19,6 @@ public class ChunkLoader : MonoBehaviour
         if (Time.frameCount % 20 == 0 && !voxelWorld.generating)
         {
             voxelWorld.octree.UpdateOctree(new TerrainUtility.CameraData() { position = transform.position, forwardVector = transform.forward });
-            lastPosition = transform.position;
         }
     }    
 }

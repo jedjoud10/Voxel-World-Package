@@ -5,7 +5,15 @@
 //Example generator
 float Density(float3 p, float3 lp)
 {
-    return p.y + snoise(p * 0.01) * 50;
+    float noiseDensity = 0;
+    float maxNoiseDensity = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        noiseDensity += abs(snoise((p * 0.002 + 5) * pow(2, i) * float3(1, 0, 1) ) * pow(0.5, i));
+        maxNoiseDensity += pow(0.5, i);
+    }
+    noiseDensity /= maxNoiseDensity;
+    return p.y + noiseDensity * 100;
 }
 //The color function
 float3 Color(float3 p, float3 lp, float3 n)

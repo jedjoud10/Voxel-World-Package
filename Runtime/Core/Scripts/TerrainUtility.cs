@@ -1,8 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Unity.Mathematics;
-using System.Runtime.CompilerServices;
+using static TerrainUtility;
 /// <summary>
 /// Utility class for terrain
 /// </summary>
@@ -187,6 +185,23 @@ public static class TerrainUtility
             this.smoothnessMetallicDensity = math.lerp(math.float3(a.smoothness, a.metallic, a.density), math.float3(b.smoothness, b.metallic, b.density), t);
         }
     }
-}
 
-public class DensityObjects { }
+    /// <summary>
+    /// Request intersection test
+    /// </summary>
+    public static bool NodeIntersectWithBounds(OctreeNode node, VoxelAABBBound bounds)
+    {
+        return (node.chunkPosition.x <= bounds.max.x && node.chunkPosition.x + node.chunkSize >= bounds.min.x) &&
+               (node.chunkPosition.y <= bounds.max.y && node.chunkPosition.y + node.chunkSize >= bounds.min.y) &&
+               (node.chunkPosition.z <= bounds.max.z && node.chunkPosition.z + node.chunkSize >= bounds.min.z);
+    }
+}
+/// <summary>
+/// All the possible objects you can create in the GPU density functions
+/// </summary>
+public abstract class DensityObject
+{
+    //Abstract variables
+    public float3 pos;
+    public abstract bool CheckBounds(OctreeNode node);
+}
