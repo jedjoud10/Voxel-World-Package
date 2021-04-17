@@ -24,6 +24,7 @@ public class VoxelWorld : MonoBehaviour
     public Material lowpolyMaterial;
     [Range(0, 5)]
     public int targetFrameDelay = 5;
+    public GameObject[] details;
 
     [Header("Octree options")]
     [Range(1, 24)]
@@ -42,12 +43,16 @@ public class VoxelWorld : MonoBehaviour
     public Dictionary<OctreeNode, Chunk> chunks;
     public Octree octree;
     public VoxelEditsManager voxelEditsManager;
+    public VoxelDetailsManager voxelDetailsManager;
     [HideInInspector]
     public bool generating;
+    private bool finishedStartGeneration = false, tempStartGeneration = false;
+    public event Action OnVoxelWorldFinishedGeneration;
+    public CameraData cameraData;
 
     //GPU-CPU Stuff
-    private ComputeBuffer buffer;
-    private Voxel[] voxels = new Voxel[resolution * resolution * resolution];
+    private ComputeBuffer voxelsBuffer;
+    private Voxel[] voxels = new Voxel[resolution * resolution * resolution];    
     private NativeArray<Voxel> nativeVoxels;
     private NativeList<MeshTriangle> mcTriangles;
     private NativeList<int> triangles;
@@ -66,8 +71,6 @@ public class VoxelWorld : MonoBehaviour
     private Chunk currentChunk;
     private bool completed = true;
     private int frameCountSinceLast;
-    public bool finishedStartGeneration = false, tempStartGeneration = false;
-    public event Action OnVoxelWorldFinishedGeneration;
     #endregion
     // Start is called before the first frame update
     void Start()
@@ -75,6 +78,8 @@ public class VoxelWorld : MonoBehaviour
         //Initialize everything
         octree = new Octree(this);
         voxelEditsManager = new VoxelEditsManager(this);
+        voxelDetailsManager = GetComponent<VoxelDetailsManager>();
+        voxelDetailsManager.Setup(this);
         chunks = new Dictionary<OctreeNode, Chunk>();
         chunkUpdateRequests = new Dictionary<OctreeNode, ChunkUpdateRequest>();
         chunksUpdating = new HashSet<Chunk>();
@@ -83,10 +88,10 @@ public class VoxelWorld : MonoBehaviour
         generationShader.SetInt("resolution", resolution);
         generationShader.SetVector("scale", scale);
 
-        buffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
+        voxelsBuffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
 
-        generationShader.SetBuffer(0, "buffer", buffer);
-        generationShader.SetBuffer(1, "buffer", buffer);
+        generationShader.SetBuffer(0, "voxelsBuffer", voxelsBuffer);
+        generationShader.SetBuffer(1, "voxelsBuffer", voxelsBuffer);
 
         //Cpu Job system allocations
         nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
@@ -102,7 +107,7 @@ public class VoxelWorld : MonoBehaviour
     {
         //Release everything
         vertexMergingHandle.Complete();
-        buffer.Release();
+        voxelsBuffer.Release();
         nativeVoxels.Dispose();
         mcTriangles.Dispose();
         triangles.Dispose();
@@ -115,6 +120,13 @@ public class VoxelWorld : MonoBehaviour
     void Update()
     {
         generating = chunkUpdateRequests.Count > 0 || octree.toAdd.Count > 0 || octree.toRemove.Count > 0 || chunksUpdating.Count > 0;
+
+        //Update the octree
+        if (!generating && Time.frameCount % 20 == 0)
+        {
+            octree.UpdateOctree(cameraData);
+        }
+
         //Generate a single mesh
         if (chunkUpdateRequests.Count > 0 && completed)
         {
@@ -184,6 +196,7 @@ public class VoxelWorld : MonoBehaviour
             {
                 Destroy(currentChunk.chunkGameObject);
             }
+            voxelDetailsManager.InstantiateVoxelDetails(currentChunk);
             currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
             currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
             currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
@@ -233,15 +246,18 @@ public class VoxelWorld : MonoBehaviour
     /// </summary>
     public void GenerateMesh(Chunk chunk, OctreeNode node)
     {
-        //1. Generate the data (density, rgb color, roughness, metallic) for the meshing        
+        //1. Generate the data (density, rgb color, roughness, metallic) for the meshing
         Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
+        voxelDetailsManager.ResetBufferCount();    
         generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
         generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
         generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
-        buffer.GetData(voxels);
-        
+        voxelsBuffer.GetData(voxels);
+
+        voxelDetailsManager.GetDataFromBuffer(chunk, node);
+
         nativeVoxels.CopyFrom(voxels);
         triangles.Clear();
         mcTriangles.Clear();

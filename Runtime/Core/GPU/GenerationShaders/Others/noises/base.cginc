@@ -16,3 +16,41 @@ float3 permute(float3 x) {
 float3 mod7(float3 x) {
     return x - floor(x * (1.0 / 7.0)) * 7.0;
 }
+
+#include "./GenerationShaders/Others/SDFFunctions.cginc"
+#include "./GenerationShaders/Others/noises/cellular3D.cginc"
+#include "./GenerationShaders/Others/noises/noise3D.cginc"
+#include "./GenerationShaders/Others/noises/erosionnoise.cginc"
+#include "./GenerationShaders/Others/noises/fbmnoises.cginc"
+#include "./GenerationShaders/Others/noises/hashes.cginc"
+
+
+//Base values
+float3 offset;
+float3 scale;
+float chunkScaling;
+int resolution;
+float quality;
+
+//Data stuff
+struct Voxel
+{
+    float density;
+    float3 color;
+    float3 normal;
+    float2 sm;    
+};
+struct VoxelDetail
+{
+    float3 position;
+    float3 forward;
+    float size;
+    int type;
+};
+struct ColorSmoothnessMetallic
+{
+    float3 color;
+    float2 sm;
+};
+RWStructuredBuffer<Voxel> voxelsBuffer;
+AppendStructuredBuffer<VoxelDetail> detailsBuffer;

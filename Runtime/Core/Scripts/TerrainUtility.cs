@@ -189,6 +189,17 @@ public static class TerrainUtility
     }
 
     /// <summary>
+    /// A VoxelDetail that can be spawned on the terrain
+    /// </summary>
+    public struct VoxelDetail 
+    {
+        public float3 position;
+        public float3 forward;
+        public float size;
+        public int type;
+    }
+
+    /// <summary>
     /// Request intersection test
     /// </summary>
     public static bool NodeIntersectWithBounds(OctreeNode node, VoxelAABBBound bounds)

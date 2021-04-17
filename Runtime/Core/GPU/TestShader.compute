@@ -1,0 +1,30 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VoxelMain
+#pragma kernel VoxelFinal
+#include "./GenerationShaders/Others/noises/base.cginc"
+
+//Density function
+float Density(float3 p, float3 lp)
+{
+    return p.y + fbmSnoise(p * 0.005 * float3(1, 0, 1), 0.5, 2, 6 * quality) * 50;
+}
+//Get the color, smoothness, and metallic all in one function
+ColorSmoothnessMetallic GetCSM(float3 p, float3 lp, float3 n)
+{
+    ColorSmoothnessMetallic csm;
+    csm.color = n;
+    csm.sm = 0;
+    return csm;
+}
+//This is ran for every voxel in the volume, allows us to place any voxel detail anywhere
+void PlaceVoxelDetail(float3 p, float3 lp, float3 n, float density) 
+{
+    VoxelDetail a;
+    a.position = p;
+    a.forward = n;
+    a.size = 1;
+    a.type = 0;
+    if (dot(n, float3(0, 1, 0)) > 0 && density > -0.1 && density < 0.1 && hash13(p) > 0.6) { detailsBuffer.Append(a); }
+}
+
+#include "./GenerationShaders/Others/noises/end.cginc"
