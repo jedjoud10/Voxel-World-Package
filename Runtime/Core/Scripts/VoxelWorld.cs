@@ -198,19 +198,6 @@ public class VoxelWorld : MonoBehaviour
         frameCountSinceLast++;
     }
     /// <summary>
-    /// Remap value from one range to another. https://forum.unity.com/threads/re-map-a-number-from-one-range-to-another.119437/
-    /// </summary>
-    /// <param name="value">Value to remap</param>
-    /// <param name="from1">Start 1</param>
-    /// <param name="to1">End 1</param>
-    /// <param name="from2">Start 2</param>
-    /// <param name="to2">End 2</param>
-    /// <returns></returns>
-    public static float Remap(float value, float from1, float to1, float from2, float to2)
-    {
-        return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
-    }
-    /// <summary>
     /// We want to create a new chunk
     /// </summary>
     public Chunk CreateNewChunk(OctreeNode octreeNode)
@@ -250,7 +237,7 @@ public class VoxelWorld : MonoBehaviour
         Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
         generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
         generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
-        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.4f));
+        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
         generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
         generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
         buffer.GetData(voxels);

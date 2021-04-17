@@ -106,6 +106,7 @@ public class Octree
                             //Took me literally 2 months to realize that I could've done this
                             octreeChild.chunkSize = octreeChild.size * reducingFactor;
                             octreeChild.chunkPosition = new Vector3(octreeChild.position.x, octreeChild.position.y, octreeChild.position.z) * reducingFactor;
+                            octreeChild.chunkCenter = octreeChild.chunkPosition + new Vector3(octreeChild.chunkSize / 2f, octreeChild.chunkSize / 2f, octreeChild.chunkSize / 2f);
 
                             octreeChild.hierarchyIndex = octreeParentNode.hierarchyIndex + 1;
                             octreeChild.isLeaf = true;
@@ -143,8 +144,8 @@ public class Octree
         {
             toRemove.Clear();
             toAdd.Clear();
-            toAdd.AddRange(addedOctreeNodesHashset);
-            toAdd = toAdd.OrderByDescending(x => (Vector3.Dot((x.chunkPosition - cameraData.position).normalized, cameraData.forwardVector)) + x.hierarchyIndex).ToList();
+            List<OctreeNode> toAddLocal = new List<OctreeNode>(addedOctreeNodesHashset);
+            toAdd = toAddLocal.OrderByDescending(x => (Vector3.Dot((x.chunkPosition - cameraData.position).normalized, cameraData.forwardVector)) + x.hierarchyIndex).ToList();
             toRemove.AddRange(removedOctreeNodesHashset);
             nodesChildrenCarrier = localChildrenCarriers;
             nodes = newNodes;//Update octree

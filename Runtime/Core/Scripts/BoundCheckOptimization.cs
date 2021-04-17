@@ -14,6 +14,7 @@ public static class BoundCheckOptimization
     /// <returns></returns>
     public static bool CheckNode(OctreeNode node) 
     {
+        return true;
         return NodeIntersectWithBounds(node, new VoxelAABBBound() { min = new Vector3(-50000, -1, -50000), max = new Vector3(50000, 1, 50000) });
         return node.chunkPosition.y < 50 && node.chunkPosition.y > -90;
     }
