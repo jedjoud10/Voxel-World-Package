@@ -385,7 +385,7 @@ public struct MarchingCubesJob : IJobParallelFor
                         position = vertex,
                         color = math.lerp(a.color, b.color, lerpValue),
                         normal = math.lerp(a.normal, b.normal, lerpValue),
-                        uv = math.lerp(math.float2(a.smoothness, a.metallic), math.float2(b.smoothness, b.metallic), lerpValue)
+                        uv = math.lerp(a.sm, b.sm, lerpValue)
                     };
                 }
                 mcTriangles.AddNoResize(triangle);

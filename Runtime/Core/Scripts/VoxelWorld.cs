@@ -32,7 +32,6 @@ public class VoxelWorld : MonoBehaviour
 
     [Header("Generation Settings")]
     public ComputeShader generationShader;
-    public Texture2D texture;
     public float isolevel;
     public Vector3 offset, scale;
 
@@ -58,7 +57,7 @@ public class VoxelWorld : MonoBehaviour
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 64;//The resolution of each chunk> Can either be 8-16-32-64
+    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
     public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
 
@@ -67,6 +66,8 @@ public class VoxelWorld : MonoBehaviour
     private Chunk currentChunk;
     private bool completed = true;
     private int frameCountSinceLast;
+    public bool finishedStartGeneration = false, tempStartGeneration = false;
+    public event Action OnVoxelWorldFinishedGeneration;
     #endregion
     // Start is called before the first frame update
     void Start()
@@ -78,15 +79,7 @@ public class VoxelWorld : MonoBehaviour
         chunkUpdateRequests = new Dictionary<OctreeNode, ChunkUpdateRequest>();
         chunksUpdating = new HashSet<Chunk>();
 
-        //Setup first time compute shader stuff
-        RenderTexture rt = new RenderTexture(texture.width, texture.height, 0);
-        rt.enableRandomWrite = true;
-        RenderTexture.active = rt;
-        rt.wrapMode = TextureWrapMode.Clamp;
-        Graphics.Blit(texture, rt);
-        generationShader.SetTexture(0, "animeTexture", rt);
-        generationShader.SetTexture(1, "animeTexture", rt);
-
+        //Setup first time compute shader stuff        
         generationShader.SetInt("resolution", resolution);
         generationShader.SetVector("scale", scale);
 
@@ -134,6 +127,7 @@ public class VoxelWorld : MonoBehaviour
         //Create the chunks
         if (octree.toAdd.Count > 0)
         {
+            tempStartGeneration = true;
             for (int i = 0; i < 16; i++)
             {
                 if (octree.toAdd.Count > 0)
@@ -196,6 +190,12 @@ public class VoxelWorld : MonoBehaviour
         }
 
         frameCountSinceLast++;
+        //When the terrain finishes generation for the first time
+        if (tempStartGeneration && octree.toAdd.Count == 0 && chunksUpdating.Count == 0 && chunkUpdateRequests.Count == 0 && !finishedStartGeneration)
+        {
+            finishedStartGeneration = true;
+            OnVoxelWorldFinishedGeneration?.Invoke();
+        }
     }
     /// <summary>
     /// We want to create a new chunk

@@ -159,7 +159,7 @@ public static class TerrainUtility
         public float density;
         public float3 color;
         public float3 normal;
-        public float smoothness, metallic;
+        public float2 sm;
     }
     
     /// <summary>
@@ -177,14 +177,14 @@ public static class TerrainUtility
             this.pos = pos;
             this.color = a.color;
             this.normal = a.normal;
-            this.smoothnessMetallicDensity = math.float3(a.smoothness, a.metallic, a.density);
+            this.smoothnessMetallicDensity = math.float3(a.sm.x, a.sm.y, a.density);
         }
         public SkirtVoxel(Voxel a, Voxel b, float t, float3 pos)
         {
             this.pos = pos;
             this.color = Vector3.Lerp(a.color, b.color, t);
             this.normal = Vector3.Lerp(a.normal, b.normal, t);
-            this.smoothnessMetallicDensity = math.lerp(math.float3(a.smoothness, a.metallic, a.density), math.float3(b.smoothness, b.metallic, b.density), t);
+            this.smoothnessMetallicDensity = math.lerp(math.float3(a.sm.x, a.sm.y, a.density), math.float3(b.sm.x, b.sm.y, b.density), t);
         }
     }
 
