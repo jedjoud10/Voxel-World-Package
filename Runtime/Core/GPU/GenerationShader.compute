@@ -48,10 +48,10 @@ ColorSmoothnessMetallic GetCSM(float3 p, float3 lp, float3 n)
     //return MountainsBiomeCSM(p, lp, n);
     return FrozenLakeBiomeCSM(p, lp, n, frozenLakeNoise);
 }
-//This is ran for every voxel in the volume, allows us to place any voxel detail anywhere
-void PlaceVoxelDetail(float3 p, float3 lp, float3 n, float density)
+//This is ran for every intersecting edge in the volume, allows us to place any voxel detail on the surface
+void PlaceVoxelDetailEdge(float3 p, float3 lp, float3 n)
 {
-
+    
 }
 
 #include "./GenerationShaders/Others/noises/end.cginc"

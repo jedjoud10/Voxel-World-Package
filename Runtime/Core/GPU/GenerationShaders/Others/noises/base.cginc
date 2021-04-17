@@ -31,6 +31,7 @@ float3 scale;
 float chunkScaling;
 int resolution;
 float quality;
+float isolevel;
 
 //Data stuff
 struct Voxel

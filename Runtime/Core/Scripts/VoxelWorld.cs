@@ -88,6 +88,7 @@ public class VoxelWorld : MonoBehaviour
         //Setup first time compute shader stuff        
         generationShader.SetInt("resolution", resolution);
         generationShader.SetVector("scale", scale);
+        generationShader.SetFloat("isolevel", isolevel);
 
         voxelsBuffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
 
