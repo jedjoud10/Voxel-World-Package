@@ -24,7 +24,6 @@ public class VoxelWorld : MonoBehaviour
     public Material lowpolyMaterial;
     [Range(0, 5)]
     public int targetFrameDelay = 5;
-    public GameObject[] details;
 
     [Header("Octree options")]
     [Range(1, 24)]
@@ -42,7 +41,9 @@ public class VoxelWorld : MonoBehaviour
     public HashSet<Chunk> chunksUpdating;
     public Dictionary<OctreeNode, Chunk> chunks;
     public Octree octree;
+    [HideInInspector]
     public VoxelEditsManager voxelEditsManager;
+    [HideInInspector]
     public VoxelDetailsManager voxelDetailsManager;
     [HideInInspector]
     public bool generating;
