@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Burst;
-using static TerrainUtility;
+using static VoxelUtility;
 /// <summary>
 /// Create the skirts for the terrain in the x, y and z axis
 /// </summary>

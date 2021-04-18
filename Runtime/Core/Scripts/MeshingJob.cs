@@ -5,7 +5,7 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
-using static TerrainUtility;
+using static VoxelUtility;
 public struct MeshingJob : IJobParallelFor
 {
     //Marching Cubes variables

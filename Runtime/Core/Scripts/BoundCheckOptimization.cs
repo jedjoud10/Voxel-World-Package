@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static TerrainUtility;
+using static VoxelUtility;
 /// <summary>
 /// Checks if a specific octree node touches the surface, if not then ignore it
 /// </summary>

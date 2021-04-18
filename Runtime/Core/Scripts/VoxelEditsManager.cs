@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static TerrainUtility;
+using static VoxelUtility;
 //Manages and optimizes the voxel edits
 public class VoxelEditsManager
 {

@@ -9,7 +9,7 @@ using Unity.Jobs;
 using Unity.Collections;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
-using static TerrainUtility;
+using static VoxelUtility;
 using Unity.Mathematics;
 /// <summary>
 /// The whole class handling the creation/generation/removal of chunks

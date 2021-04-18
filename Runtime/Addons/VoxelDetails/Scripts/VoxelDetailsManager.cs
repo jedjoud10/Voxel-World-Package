@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static TerrainUtility;
+using static VoxelUtility;
 /// <summary>
 /// Manages the spawning of VoxelDetails
 /// </summary>

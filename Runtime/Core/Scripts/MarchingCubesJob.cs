@@ -5,7 +5,7 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
-using static TerrainUtility;
+using static VoxelUtility;
 /// <summary>
 /// Turns the GPU data into a mesh
 /// </summary>
@@ -350,8 +350,8 @@ public struct MarchingCubesJob : IJobParallelFor
     };
     public void Execute(int index)
     {
-        int3 pos = TerrainUtility.UnflattenIndex(index, resolution-3);
-        int i = TerrainUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution);
+        int3 pos = VoxelUtility.UnflattenIndex(index, resolution-3);
+        int i = VoxelUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution);
         //Indexing
         int mcCase = 0;
         if (voxels[i + 0].density < isolevel) mcCase |= 1;

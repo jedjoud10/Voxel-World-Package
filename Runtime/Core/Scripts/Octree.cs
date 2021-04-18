@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEngine;
-using static TerrainUtility;
+using static VoxelUtility;
 
 /// <summary>
 /// My octree implementation

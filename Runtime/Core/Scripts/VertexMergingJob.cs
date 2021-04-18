@@ -5,7 +5,7 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Burst;
-using static TerrainUtility;
+using static VoxelUtility;
 /// <summary>
 /// Job that transforms the triangles from the MarchingCubesJob into an actual mesh, with vertex sharing
 /// </summary>
