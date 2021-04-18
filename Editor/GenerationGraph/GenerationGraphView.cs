@@ -80,7 +80,7 @@ public class GenerationGraphView : GraphView
 
         ports.ForEach((port => 
         {
-            if (startPort != port && startPort.node!= port.node && startPort.portType == port.portType) compatiblePorts.Add(port);
+            if (startPort != port && startPort.node!= port.node && startPort.portType == port.portType && startPort.direction != port.direction) compatiblePorts.Add(port);
         }));
         return compatiblePorts;
     }
