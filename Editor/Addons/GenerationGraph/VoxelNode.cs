@@ -4,11 +4,24 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using static VoxelUtility;
 using static GenerationGraphUtility;
+using System;
+using UnityEngine.UIElements;
 /// <summary>
-/// A single generation node
+/// Voxel node data
 /// </summary>
-public class GenerationNode : Node
+public class VoxelNodeData
 {
+    //Main variables
     public string GUID;
     public VoxelNodeType obj;
+    public bool connected;
+}
+
+/// <summary>
+/// Voxel port data
+/// </summary>
+public class VoxelPortData
+{
+    //Main variables
+    public bool csmPort;
 }

@@ -2,7 +2,8 @@
     "name": "com.jedjoud.voxelworld.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:173b89615eaddaa4094ba831211ae17d"
+        "GUID:173b89615eaddaa4094ba831211ae17d",
+        "GUID:d8b63aba1907145bea998dd612889d6b"
     ],
     "includePlatforms": [
         "Editor"
