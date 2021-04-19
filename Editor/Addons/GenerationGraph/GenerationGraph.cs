@@ -42,6 +42,18 @@ public class GenerationGraph : EditorWindow
     private void GenerateToolbar()
     {
         var toolbar = new Toolbar();
+        Button saveButton = new Button(() => {  });
+        Button loadButton = new Button(() => {  });
+        Button generateShaderButton = new Button(() => {  });
+
+        //Add the buttons to the toolbar
+        saveButton.text = "Save Graph";
+        toolbar.Add(saveButton);
+        loadButton.text = "Load Graph";
+        toolbar.Add(loadButton);
+        generateShaderButton.text = "Generate Shader";
+        toolbar.Add(generateShaderButton);
+
         graphView.Add(toolbar);
     }
 

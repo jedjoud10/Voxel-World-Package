@@ -23,5 +23,5 @@ public class VoxelNodeData
 public class VoxelPortData
 {
     //Main variables
-    public bool csmPort;
+    public bool? normalPort, csmPort;
 }

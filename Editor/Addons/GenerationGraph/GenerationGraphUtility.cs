@@ -28,10 +28,10 @@ public static class GenerationGraphUtility
         /// <summary>
         /// Generate a port for a specific node
         /// </summary>
-        public virtual Port CreatePort(Direction portDirection, Type type, string name, Port.Capacity capacity = Port.Capacity.Single)
+        public virtual Port CreatePort(Direction portDirection, Type type, string name, Port.Capacity capacity = Port.Capacity.Single, bool? normalPort = null, bool? csmPort = null)
         {            
             Port port = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, type);
-            port.userData = new VoxelPortData();
+            port.userData = new VoxelPortData() { normalPort = normalPort, csmPort = csmPort };
             port.portName = name;
             switch (portDirection)
             {
@@ -85,25 +85,15 @@ public static class GenerationGraphUtility
         {
             throw new System.NotImplementedException();
         }
-
-        /// <summary>
-        /// Creates a custom port for this VoxelNode Input node
-        /// </summary>
-        public Port CreateCSMPort(Direction portDirection, Type type, string name, Port.Capacity capacity = Port.Capacity.Single)
-        {
-            Port port = base.CreatePort(portDirection, type, name, capacity);
-            ((VoxelPortData)port.userData).csmPort = true;
-            return port;
-        }
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
-            CreatePort(Direction.Output, typeof(Vector3), "Position", Port.Capacity.Multi);
-            CreatePort(Direction.Output, typeof(Vector3), "Local Position", Port.Capacity.Multi);
-            CreateCSMPort(Direction.Output, typeof(Vector3), "Normal", Port.Capacity.Multi);
+            CreatePort(Direction.Output, typeof(Vector3), "Position", Port.Capacity.Multi, false, null);
+            CreatePort(Direction.Output, typeof(Vector3), "Local Position", Port.Capacity.Multi, false, null);
+            CreatePort(Direction.Output, typeof(Vector3), "Normal", Port.Capacity.Multi, true, null);
             return (name, inputPorts, outputPorts);
         }
     }
@@ -129,9 +119,9 @@ public static class GenerationGraphUtility
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
-            CreatePort(Direction.Input, typeof(float), "Density", Port.Capacity.Single);
-            CreatePort(Direction.Input, typeof(Vector2), "Smoothness and Metallic", Port.Capacity.Single);
-            CreatePort(Direction.Input, typeof(Vector3), "Color", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(float), "Density", Port.Capacity.Single, null, false);
+            CreatePort(Direction.Input, typeof(Vector2), "Smoothness and Metallic", Port.Capacity.Single, null, true);
+            CreatePort(Direction.Input, typeof(Vector3), "Color", Port.Capacity.Single, null, true);
             return (name, inputPorts, outputPorts);
         }
     }
@@ -197,8 +187,14 @@ public static class GenerationGraphUtility
         /// </summary>
         private void CreateInputConstantPort()
         {
-            var vec2Field = new Vector2Field();
-            inputPorts.Add(vec2Field);
+            var floatField1 = new FloatField();
+            var floatField2 = new FloatField();
+            Port port1 = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
+            Port port2 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
+            port1.Add(floatField1);
+            port2.Add(floatField2);
+            inputPorts.Add(port1);
+            inputPorts.Add(port2);
         }
 
         /// <summary>
@@ -233,8 +229,18 @@ public static class GenerationGraphUtility
         /// </summary>
         private void CreateInputConstantPort()
         {
-            var vec3Field = new Vector3Field();
-            inputPorts.Add(vec3Field);
+            var floatField1 = new FloatField();
+            var floatField2 = new FloatField();
+            var floatField3 = new FloatField();
+            Port port1 = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
+            Port port2 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
+            Port port3 = CreatePort(Direction.Input, typeof(float), "Input Z", Port.Capacity.Single);
+            port1.Add(floatField1);
+            port2.Add(floatField2);
+            port3.Add(floatField3);
+            inputPorts.Add(port1);
+            inputPorts.Add(port2);
+            inputPorts.Add(port3);
         }
 
         /// <summary>
@@ -269,8 +275,22 @@ public static class GenerationGraphUtility
         /// </summary>
         private void CreateInputConstantPort()
         {
-            var vec4Field = new Vector4Field();
-            inputPorts.Add(vec4Field);
+            var floatField1 = new FloatField();
+            var floatField2 = new FloatField();
+            var floatField3 = new FloatField();
+            var floatField4 = new FloatField();
+            Port port1 = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
+            Port port2 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
+            Port port3 = CreatePort(Direction.Input, typeof(float), "Input Z", Port.Capacity.Single);
+            Port port4 = CreatePort(Direction.Input, typeof(float), "Input W", Port.Capacity.Single);
+            port1.Add(floatField1);
+            port2.Add(floatField2);
+            port3.Add(floatField3);
+            port4.Add(floatField4);
+            inputPorts.Add(port1);
+            inputPorts.Add(port2);
+            inputPorts.Add(port3);
+            inputPorts.Add(port4);
         }
 
         /// <summary>
@@ -385,6 +405,35 @@ public static class GenerationGraphUtility
             CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Offset", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(float), "Radius", Port.Capacity.Single);
+            CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
+            return (name, inputPorts, outputPorts);
+        }
+    }
+
+    /// <summary>
+    /// Cube
+    /// </summary>
+    public class VNCube : VNShape
+    {
+        public override string name => "SDF Shapes/Cube";
+
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public override VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(Vector3), "Offset", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(Vector3), "Bounds", Port.Capacity.Single);
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
             return (name, inputPorts, outputPorts);
         }

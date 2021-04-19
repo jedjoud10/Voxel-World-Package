@@ -41,7 +41,7 @@ public class GenerationGraphView : GraphView
                 if (voxelNodeType is VNInput || voxelNodeType is VNResult) continue;
                 evt.menu.AppendAction("Create Node/" + voxelNodeType.name, (e) =>
                 {
-                    CreateNode(Vector2.zero, voxelNodeType.GetType());
+                    CreateNode(e.eventInfo.localMousePosition - new Vector2(this.viewTransform.position.x, this.viewTransform.position.y), voxelNodeType.GetType());
                 });
             }
         }
@@ -66,10 +66,7 @@ public class GenerationGraphView : GraphView
         //Generate the output ports
         var customData = ((VoxelNodeData)node.userData).obj.GetCustomNodeData(node);
         Type nodeType = ((VoxelNodeData)node.userData).obj.GetType();
-        if (nodeType == typeof(VNInput) || nodeType == typeof(VNResult))
-        {
-            node.capabilities &= ~Capabilities.Deletable;
-        }
+        if (nodeType == typeof(VNInput) || nodeType == typeof(VNResult)) node.capabilities &= ~Capabilities.Deletable;
         node.title = customData.Item1;
         foreach (var item in customData.Item2) node.inputContainer.Add(item);
         foreach (var item in customData.Item3) node.outputContainer.Add(item);
@@ -94,24 +91,20 @@ public class GenerationGraphView : GraphView
             startPort.node != port.node &&
             startPort.portType == port.portType &&
             startPort.direction != port.direction) 
-            {                
+            {
                 //Checking if this port is a CSM port or not
-                if (((VoxelPortData)startPort.userData).csmPort == ((VoxelPortData)port.userData).csmPort || (!((VoxelNodeData)(startPort.node).userData).connected && !((VoxelNodeData)(port.node).userData).connected))
+                VoxelPortData input = startPort.direction == Direction.Input ? ((VoxelPortData)startPort.userData) : ((VoxelPortData)port.userData);
+                VoxelPortData output = startPort.direction == Direction.Output ? ((VoxelPortData)startPort.userData) : ((VoxelPortData)port.userData);
+                if ((output.normalPort == true && input.csmPort == true) ||
+                    (output.normalPort == false && input.csmPort == true) ||
+                    (output.normalPort == false && input.csmPort == false) ||
+                    ((output.normalPort == null && output.csmPort == null) || (input.normalPort == null && input.csmPort == null)))
                 {
                     compatiblePorts.Add((port));
                 }                
             }
         }));
         return compatiblePorts;
-    }
-
-    /// <summary>
-    /// Check if the selection is valid and delete it if it is
-    /// </summary>
-    /// <returns></returns>
-    public override EventPropagation DeleteSelection()
-    {
-        return base.DeleteSelection();
     }
 
     /// <summary>
@@ -124,10 +117,6 @@ public class GenerationGraphView : GraphView
             foreach (Edge edge in change.edgesToCreate)
             {
                 //Foreach edge to add
-                ((VoxelNodeData)edge.input.node.userData).connected = true;
-                ((VoxelNodeData)edge.output.node.userData).connected = true;
-
-                ((VoxelPortData)edge.input.userData).csmPort = ((VoxelPortData)edge.output.userData).csmPort;
             }
         }
 
@@ -139,11 +128,6 @@ public class GenerationGraphView : GraphView
                 {
                     //Foeach edge to remove
                     Edge edge = (Edge)e;
-
-                    ((VoxelNodeData)edge.input.node.userData).connected = false;
-                    ((VoxelNodeData)edge.output.node.userData).connected = false;
-
-                    ((VoxelPortData)edge.input.userData).csmPort = false;
                 }
             }
         }
