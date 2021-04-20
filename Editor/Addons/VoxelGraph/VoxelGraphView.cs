@@ -15,22 +15,36 @@ public class VoxelGraphView : GraphView
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
     private readonly List<VoxelNodeType> voxelsNodeTypes = GetAllVoxelNodeTypes();
-    public bool normalGraph;
+    public VoxelGraphType voxelGraphType;
 
     /// <summary>
     /// Constructor
     /// </summary>
-    public VoxelGraphView(bool normalGraph, Vector3 viewTransform)
+    public VoxelGraphView(VoxelGraphType voxelGraphType, Vector3 viewTransform)
     {
         this.viewTransform.position = viewTransform;
         StyleSheet styleSheet = (StyleSheet)AssetDatabase.LoadAssetAtPath("Packages/com.jedjoud.voxelworld/Editor/Addons/Resources/VoxelGraphStyleSheet.uss", typeof(StyleSheet));
         styleSheets.Add(styleSheet);
-        this.normalGraph = normalGraph;
+        this.voxelGraphType = voxelGraphType;
         this.AddManipulator(new ContentDragger());
         this.AddManipulator(new SelectionDragger());
         this.AddManipulator(new RectangleSelector());
-        if (normalGraph) CreateNode(new Vector2(0, 0), typeof(VNNormalResult));
-        else CreateNode(new Vector2(0, 0), typeof(VNResult));
+
+        //Create corresponding result nodes
+        switch (voxelGraphType)
+        {
+            case VoxelGraphType.Density:
+                CreateNode(new Vector2(0, 0), typeof(VNResult));
+                break;
+            case VoxelGraphType.Normal:
+                CreateNode(new Vector2(0, 0), typeof(VNNormalResult));
+                break;
+            case VoxelGraphType.VoxelDetails:
+                CreateNode(new Vector2(0, 0), typeof(VNVoxelDetailsResult));
+                break;
+            default:
+                break;
+        }
 
         var gridBackground = new GridBackground();
         Insert(0, gridBackground);
@@ -47,9 +61,23 @@ public class VoxelGraphView : GraphView
         {
             foreach (VoxelNodeType voxelNodeType in voxelsNodeTypes)
             {
-                if (voxelNodeType is VNResult || voxelNodeType is VNNormalResult) continue;
+                if (voxelNodeType is VNResult || voxelNodeType is VNNormalResult || voxelNodeType is VNVoxelDetailsResult) continue;
                 DropdownMenuAction.Status status = DropdownMenuAction.Status.Normal;
-                if ((voxelNodeType.GetType() == typeof(VNNormal) && !normalGraph) || (voxelNodeType.GetType() == typeof(VNDensity) && !normalGraph)) status = DropdownMenuAction.Status.Disabled;
+
+                switch (voxelGraphType)
+                {
+                    case VoxelGraphType.Density:
+                        if (voxelNodeType is VNNormal || voxelNodeType is VNDensity || voxelNodeType is VNSurfacePosition || voxelNodeType is VNSurfaceNormal) status = DropdownMenuAction.Status.Disabled;
+                        break;
+                    case VoxelGraphType.Normal:
+                        if (voxelNodeType is VNSurfacePosition || voxelNodeType is VNSurfaceNormal) status = DropdownMenuAction.Status.Disabled;
+                        break;
+                    case VoxelGraphType.VoxelDetails:
+                        break;
+                    default:
+                        break;
+                }
+
                 evt.menu.AppendAction("Create Node/" + voxelNodeType.name, (e) =>
                 {
                     CreateNode(e.eventInfo.localMousePosition - new Vector2(this.viewTransform.position.x, this.viewTransform.position.y), voxelNodeType.GetType());
@@ -86,7 +114,7 @@ public class VoxelGraphView : GraphView
         //Generate the output ports
         var customData = ((VoxelNodeData)node.userData).obj.GetCustomNodeData(node);
         Type nodeType = ((VoxelNodeData)node.userData).obj.GetType();
-        if (nodeType == typeof(VNResult) || nodeType == typeof(VNNormalResult)) node.capabilities &= ~Capabilities.Deletable;
+        if (nodeType == typeof(VNResult) || nodeType == typeof(VNNormalResult) || nodeType == typeof(VNVoxelDetailsResult)) node.capabilities &= ~Capabilities.Deletable;
         node.title = customData.Item1;
         foreach (var item in customData.Item2) node.inputContainer.Add(item);
         foreach (var item in customData.Item3) node.outputContainer.Add(item);

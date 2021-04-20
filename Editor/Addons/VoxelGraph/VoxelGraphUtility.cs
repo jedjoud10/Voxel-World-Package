@@ -21,7 +21,6 @@ public static class VoxelGraphUtility
     {
         //Main abstract stuff
         abstract public string name { get; }
-        public abstract VoxelAABBBound GetAABB();
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
         public List<Port> inputPorts = new List<Port>(), outputPorts = new List<Port>();
         protected Node node;
@@ -60,6 +59,17 @@ public static class VoxelGraphUtility
     }
 
     /// <summary>
+    /// An interface used
+    /// </summary>
+    public interface IBoundCheckOptimizator
+    {
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public VoxelAABBBound GetAABB();
+    }
+
+    /// <summary>
     /// Gets all of the VoxelGenerationObject classes
     /// </summary>
     /// <returns></returns>
@@ -79,14 +89,6 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Position";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -107,19 +109,50 @@ public static class VoxelGraphUtility
         public override string name => "Input/Voxel Normal";
 
         /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
-        /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
             CreatePort(Direction.Output, typeof(Vector3), "Normal", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    /// <summary>
+    /// Node that tells us the zero-crossing point
+    /// </summary>
+    public class VNSurfacePosition : VoxelNodeType
+    {
+        //Main voxel node variables
+        public override string name => "Input/Surface Intersect Position";
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Output, typeof(Vector3), "Surface Intersect Position", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    /// <summary>
+    /// Node that tells us the zero-crossing point
+    /// </summary>
+    public class VNSurfaceNormal : VoxelNodeType
+    {
+        //Main voxel node variables
+        public override string name => "Input/Surface Intersect Normal";
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Output, typeof(Vector3), "Surface Intersect Normal", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
     }
@@ -132,13 +165,6 @@ public static class VoxelGraphUtility
         //Main voxel node variables
         public override string name => "Input/Voxel Density";
 
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -155,16 +181,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNResult : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Voxel Result";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary> 
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
-
+        
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -181,15 +200,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNNormalResult : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Normal Voxel Result";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary> 
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -203,7 +215,32 @@ public static class VoxelGraphUtility
         }
     }
 
+    /// <summary>
+    /// Voxel Details Result node
+    /// </summary>
+    public class VNVoxelDetailsResult : VoxelNodeType
+    {
+        //Main voxel node variables
+        public override string name => "VoxelDetails Result";
 
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(int), "Type", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(Vector3), "Rotation", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(Vector3), "Scale", Port.Capacity.Single);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    /// <summary>
+    /// Type of VoxelGraph
+    /// </summary>
+    public enum VoxelGraphType { Density, Normal, VoxelDetails }
     #endregion
 
     #region Constant Node Type
@@ -218,16 +255,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNConstantFloat : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Constants/Float";
         public float value;
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Creates a new constant port for this node
@@ -256,16 +286,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNConstantVec2 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Constants/Vector2";
         public Vector2 value;
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Creates a new constant port for this node
@@ -301,16 +324,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNConstantVec3 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Constants/Vector3";
         public Vector3 value;
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Creates a new constant port for this node
@@ -351,16 +367,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNConstantVec4 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Constants/Vector4";
         public Vector4 value;
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Creates a new constant port for this node
@@ -405,16 +414,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNConstantColor : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Constants/Color";
         public Vector3 value;
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Creates a new constant port for this node
@@ -453,15 +455,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNSplitterVec2 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Splitters/Vector2";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -481,15 +476,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNSplitterVec3 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Splitters/Vector3";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -510,15 +498,9 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNSplittersVec4 : VNConstants
     {
+        //Main voxel node variables
         public override string name => "Splitters/Vector4";
 
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -549,15 +531,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNSphere : VNShape
     {
+        //Main voxel node variables
         public override string name => "SDF Shapes/Sphere";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -581,15 +556,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNCube : VNShape
     {
+        //Main voxel node variables
         public override string name => "SDF Shapes/Cube";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -624,15 +592,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNCSGUnion : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "CSG/Union";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -661,15 +622,8 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNMathAddition : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Math/Addition";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -686,15 +640,8 @@ public static class VoxelGraphUtility
 
     public class VNMathSubtraction : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Math/Subtraction";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -711,15 +658,8 @@ public static class VoxelGraphUtility
 
     public class VNMathMultiplication : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Math/Multiplication";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -736,15 +676,8 @@ public static class VoxelGraphUtility
 
     public class VNMathDivision : VoxelNodeType
     {
+        //Main voxel node variables
         public override string name => "Math/Division";
-
-        /// <summary>
-        /// Get the AABB bound for this object
-        /// </summary>
-        public override VoxelAABBBound GetAABB()
-        {
-            throw new System.NotImplementedException();
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node

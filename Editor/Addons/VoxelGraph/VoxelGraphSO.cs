@@ -7,16 +7,21 @@ using UnityEngine;
 /// <summary>
 /// A scriptable object for the voxel graphs
 /// </summary>
+[CreateAssetMenu(fileName = "NewVoxelGraph", menuName = "Voxel World/Voxel Graph")]
 public class VoxelGraphSO : ScriptableObject
 {
     public Node[] nodes;
     public Edge[] edges;
 
+
+    /// <summary>
+    /// Opens the voxel graph when double clicking the asset
+    /// </summary>
     [OnOpenAssetAttribute(0)]
     public static bool OpenVoxelGraph(int instanceID, int line)
     {
-        string name = EditorUtility.InstanceIDToObject(instanceID).name;
-        Debug.Log("Open Asset step: 1 (" + name + ")");
+        VoxelGraphSO obj = (VoxelGraphSO)EditorUtility.InstanceIDToObject(instanceID);
+        VoxelGraph.OpenGraphWindow(obj);
         return false; // we did not handle the open
     }
 }
