@@ -14,14 +14,4 @@ public class VoxelNodeData
     //Main variables
     public string GUID;
     public VoxelNodeType obj;
-    public bool connected;
-}
-
-/// <summary>
-/// Voxel port data
-/// </summary>
-public class VoxelPortData
-{
-    //Main variables
-    public bool? normalPort, csmPort;
 }

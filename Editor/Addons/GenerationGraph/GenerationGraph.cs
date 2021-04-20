@@ -10,7 +10,8 @@ using UnityEngine.UIElements;
 public class GenerationGraph : EditorWindow
 {
     //Main variables
-    private GenerationGraphView graphView;
+    private GenerationGraphView graphView, graphView1;
+    private VisualElement visualElement;//Thank you Unity for having this! :)
 
     /// <summary>
     /// Actually creates the graph window
@@ -27,13 +28,39 @@ public class GenerationGraph : EditorWindow
     /// </summary>
     private void ConstructGraphView() 
     {
-        graphView = new GenerationGraphView
+        visualElement = new VisualElement();
+        float boxSize = 0.5f;
+        //Bottom graph
+        graphView = new GenerationGraphView(true)
         {
-            name = "Generation Graph"
+            name = "Normal Generation Graph",
         };
+        graphView.StretchToParentWidth();
+        graphView.style.bottom = new StyleLength(new Length(0, LengthUnit.Percent));
+        graphView.style.top = new StyleLength(new Length(50 + boxSize/2f, LengthUnit.Percent));
 
-        graphView.StretchToParentSize();
-        rootVisualElement.Add(graphView);
+        //Top graph
+        graphView1 = new GenerationGraphView(false)
+        {
+            name = "Density Generation Graph",            
+        };
+        graphView1.StretchToParentWidth();
+        //graphView1.style.height = new StyleLength(new Length(50, LengthUnit.Percent));
+        graphView1.style.bottom = new StyleLength(new Length(50 + boxSize / 2f, LengthUnit.Percent));
+        graphView1.style.top = new StyleLength(new Length(0, LengthUnit.Percent));
+
+        //Separator box
+        VisualElement box = new VisualElement();
+        box.style.backgroundColor = new StyleColor(Color.black);
+        box.StretchToParentWidth();
+        box.style.bottom = new StyleLength(new Length(50 - boxSize/2f, LengthUnit.Percent));
+        box.style.top = new StyleLength(new Length(50 - boxSize/2f, LengthUnit.Percent));
+
+        visualElement.Add(graphView);
+        visualElement.Add(box);
+        visualElement.Add(graphView1);
+        visualElement.StretchToParentSize();
+        rootVisualElement.Add(visualElement);
     }
 
     /// <summary>
@@ -45,7 +72,6 @@ public class GenerationGraph : EditorWindow
         Button saveButton = new Button(() => {  });
         Button loadButton = new Button(() => {  });
         Button generateShaderButton = new Button(() => {  });
-
         //Add the buttons to the toolbar
         saveButton.text = "Save Graph";
         toolbar.Add(saveButton);
@@ -53,17 +79,23 @@ public class GenerationGraph : EditorWindow
         toolbar.Add(loadButton);
         generateShaderButton.text = "Generate Shader";
         toolbar.Add(generateShaderButton);
-
-        graphView.Add(toolbar);
+        rootVisualElement.Insert(0, toolbar);
+        toolbar.BringToFront();
     }
-
+    /// <summary>
+    /// When this window gets created, generate the voxel graphs
+    /// </summary>
     private void OnEnable()
     {
         ConstructGraphView();
         GenerateToolbar();
     }
+
+    /// <summary>
+    /// When this window is destroyed, remove the splitViewer (Contains the two voxel graphs)
+    /// </summary>
     private void OnDisable()
     {
-        rootVisualElement.Remove(graphView);
+        rootVisualElement.Remove(visualElement);
     }
 }
