@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using static VoxelUtility;
-using static GenerationGraphUtility;
+using static VoxelGraphUtility;
 using System;
 using System.Linq;
 using UnityEngine.UIElements;
@@ -11,7 +11,7 @@ using UnityEditor.UIElements;
 /// <summary>
 /// Utility class for everything related to the generation graph
 /// </summary>
-public static class GenerationGraphUtility
+public static class VoxelGraphUtility
 {
     #region Base
     /// <summary>
@@ -219,6 +219,7 @@ public static class GenerationGraphUtility
     public class VNConstantFloat : VNConstants
     {
         public override string name => "Constants/Float";
+        public float value;
 
         /// <summary>
         /// Get the AABB bound for this object
@@ -234,6 +235,7 @@ public static class GenerationGraphUtility
         private void CreateInputConstantPort()
         {
             var floatField = new FloatField();
+            floatField.RegisterValueChangedCallback(x => { value = x.newValue; });
             inputVisualElements.Add(floatField);
         }
 
@@ -255,6 +257,7 @@ public static class GenerationGraphUtility
     public class VNConstantVec2 : VNConstants
     {
         public override string name => "Constants/Vector2";
+        public Vector2 value;
 
         /// <summary>
         /// Get the AABB bound for this object
@@ -277,6 +280,8 @@ public static class GenerationGraphUtility
             port1.Add(floatField1);
             inputVisualElements.Add(port);
             inputVisualElements.Add(port1);
+            floatField.RegisterValueChangedCallback(x => { value = new Vector2(x.newValue, 0); });
+            floatField1.RegisterValueChangedCallback(x => { value = new Vector2(0, x.newValue); });
         }
 
         /// <summary>
@@ -297,6 +302,7 @@ public static class GenerationGraphUtility
     public class VNConstantVec3 : VNConstants
     {
         public override string name => "Constants/Vector3";
+        public Vector3 value;
 
         /// <summary>
         /// Get the AABB bound for this object
@@ -323,6 +329,9 @@ public static class GenerationGraphUtility
             inputVisualElements.Add(port);
             inputVisualElements.Add(port1);
             inputVisualElements.Add(port2);
+            floatField.RegisterValueChangedCallback(x => { value = new Vector3(x.newValue, 0, 0); });
+            floatField1.RegisterValueChangedCallback(x => { value = new Vector3(0, x.newValue, 0); });
+            floatField2.RegisterValueChangedCallback(x => { value = new Vector3(0, 0, x.newValue); });
         }
 
         /// <summary>
@@ -343,6 +352,7 @@ public static class GenerationGraphUtility
     public class VNConstantVec4 : VNConstants
     {
         public override string name => "Constants/Vector4";
+        public Vector4 value;
 
         /// <summary>
         /// Get the AABB bound for this object
@@ -373,6 +383,10 @@ public static class GenerationGraphUtility
             inputVisualElements.Add(port1);
             inputVisualElements.Add(port2);
             inputVisualElements.Add(port3);
+            floatField.RegisterValueChangedCallback(x => { value = new Vector4(x.newValue, 0, 0, 0); });
+            floatField1.RegisterValueChangedCallback(x => { value = new Vector4(0, x.newValue, 0, 0); });
+            floatField2.RegisterValueChangedCallback(x => { value = new Vector4(0, 0, x.newValue, 0); });
+            floatField3.RegisterValueChangedCallback(x => { value = new Vector4(0, 0, 0, x.newValue); });
         }
 
         /// <summary>
@@ -392,6 +406,7 @@ public static class GenerationGraphUtility
     public class VNConstantColor : VNConstants
     {
         public override string name => "Constants/Color";
+        public Vector3 value;
 
         /// <summary>
         /// Get the AABB bound for this object
@@ -406,9 +421,10 @@ public static class GenerationGraphUtility
         /// </summary>
         private void CreateInputConstantPort()
         {
-            var csharpField = new ColorField();
-            csharpField.value = Color.white;
-            inputVisualElements.Add(csharpField);
+            var colorField = new ColorField();
+            colorField.value = Color.white;
+            colorField.RegisterValueChangedCallback(x => { value = new Vector3(x.newValue.r, x.newValue.g, x.newValue.b); });
+            inputVisualElements.Add(colorField);
         }
 
         /// <summary>
@@ -526,9 +542,6 @@ public static class GenerationGraphUtility
     /// </summary>
     public abstract class VNShape : VoxelNodeType
     {
-        //Shape variables
-        public Vector3 offset;
-        public Color color;
     }
 
     /// <summary>
@@ -649,6 +662,81 @@ public static class GenerationGraphUtility
     public class VNMathAddition : VoxelNodeType
     {
         public override string name => "Math/Addition";
+
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public override VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(float), "A", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(float), "B", Port.Capacity.Single);
+            CreatePort(Direction.Output, typeof(float), "Result", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    public class VNMathSubtraction : VoxelNodeType
+    {
+        public override string name => "Math/Subtraction";
+
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public override VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(float), "A", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(float), "B", Port.Capacity.Single);
+            CreatePort(Direction.Output, typeof(float), "Result", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    public class VNMathMultiplication : VoxelNodeType
+    {
+        public override string name => "Math/Multiplication";
+
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public override VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(float), "A", Port.Capacity.Single);
+            CreatePort(Direction.Input, typeof(float), "B", Port.Capacity.Single);
+            CreatePort(Direction.Output, typeof(float), "Result", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    public class VNMathDivision : VoxelNodeType
+    {
+        public override string name => "Math/Division";
 
         /// <summary>
         /// Get the AABB bound for this object

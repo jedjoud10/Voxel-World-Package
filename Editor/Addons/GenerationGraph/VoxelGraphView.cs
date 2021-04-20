@@ -6,11 +6,11 @@ using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static GenerationGraphUtility;
+using static VoxelGraphUtility;
 /// <summary>
 /// The graph view that handles the nodes
 /// </summary>
-public class GenerationGraphView : GraphView
+public class VoxelGraphView : GraphView
 {
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
@@ -20,15 +20,15 @@ public class GenerationGraphView : GraphView
     /// <summary>
     /// Constructor
     /// </summary>
-    public GenerationGraphView(bool normalGraph)
+    public VoxelGraphView(bool normalGraph, Vector3 viewTransform)
     {
+        this.viewTransform.position = viewTransform;
         StyleSheet styleSheet = (StyleSheet)AssetDatabase.LoadAssetAtPath("Packages/com.jedjoud.voxelworld/Editor/Addons/Resources/VoxelGraphStyleSheet.uss", typeof(StyleSheet));
         styleSheets.Add(styleSheet);
         this.normalGraph = normalGraph;
         this.AddManipulator(new ContentDragger());
         this.AddManipulator(new SelectionDragger());
         this.AddManipulator(new RectangleSelector());
-
         if (normalGraph) CreateNode(new Vector2(0, 0), typeof(VNNormalResult));
         else CreateNode(new Vector2(0, 0), typeof(VNResult));
 
@@ -55,6 +55,16 @@ public class GenerationGraphView : GraphView
                     CreateNode(e.eventInfo.localMousePosition - new Vector2(this.viewTransform.position.x, this.viewTransform.position.y), voxelNodeType.GetType());
                 }, status);
             }
+
+            evt.menu.AppendAction("Debug/Debug Nodes", (e) =>
+            {
+                foreach (var item in nodes)
+                {
+                    VoxelNodeData data = (VoxelNodeData)item.userData;
+                    VNConstantFloat constant = data.obj as VNConstantFloat;
+                    if(constant != null) Debug.Log(constant.value);
+                }                
+            });
         }
 
         base.BuildContextualMenu(evt);
