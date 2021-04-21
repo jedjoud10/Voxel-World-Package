@@ -24,7 +24,7 @@ public static class VoxelGraphUtility
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
         protected int portIndex;
         public int type;
-        public List<Port> inputPorts = new List<Port>(), outputPorts = new List<Port>();
+        public List<Port> inputPorts = new List<Port>(), outputPorts = new List<Port>(), totalPorts = new List<Port>();
         protected Node node;
 
         /// <summary>
@@ -48,6 +48,7 @@ public static class VoxelGraphUtility
                 default:
                     break;
             }
+            totalPorts.Add(port);
             portIndex++;
             return port;
         }
@@ -200,12 +201,12 @@ public static class VoxelGraphUtility
     }
 
     /// <summary>
-    /// Normal Result node
+    /// CSM Result node
     /// </summary>
-    public class VNNormalResult : VoxelNode
+    public class VNCSMResult : VoxelNode
     {
         //Main voxel node variables
-        public override string name => "Normal Voxel Result";
+        public override string name => "CSM Result";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -245,7 +246,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Type of VoxelGraph
     /// </summary>
-    public enum VoxelGraphType { Density, Normal, VoxelDetails }
+    public enum VoxelGraphType { Density, CSM, VoxelDetails }
     #endregion
 
     #region Constant Node Type

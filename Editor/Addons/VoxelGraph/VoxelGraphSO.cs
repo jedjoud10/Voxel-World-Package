@@ -12,20 +12,22 @@ using static VoxelGraphUtility;
 [System.Serializable]
 public class VoxelGraphSO : ScriptableObject
 {
+    [HideInInspector]
     public SavedVoxelGraph densityGraph;
+    [HideInInspector]
     public SavedVoxelGraph csmGraph;
+    [HideInInspector]
     public SavedVoxelGraph voxelDetailsGraph;
 
     /// <summary>
     /// Opens the voxel graph when double clicking the asset
     /// </summary>
-    [OnOpenAssetAttribute(0)]
+    [OnOpenAsset(0)]
     public static bool OpenVoxelGraph(int instanceID, int line)
     {
         VoxelGraphSO obj = (VoxelGraphSO)EditorUtility.InstanceIDToObject(instanceID);
-        //Generate the default density graph
-
-        if (obj.densityGraph == null || obj.densityGraph.nodes.Count == 0) 
+        //Generate the default Density graph if it wasn't generated yet
+        if (obj.densityGraph == null || obj.densityGraph.nodes == null) 
         {
             obj.densityGraph = new SavedVoxelGraph();
             obj.densityGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode() 
@@ -35,12 +37,36 @@ public class VoxelGraphSO : ScriptableObject
                 type = 5,
                 value = null
             } };
+            obj.densityGraph.edges = new List<SavedVoxelEdge>();
         }
-
-        if (obj.csmGraph == null) obj.csmGraph = new SavedVoxelGraph();
-        if (obj.voxelDetailsGraph == null) obj.voxelDetailsGraph = new SavedVoxelGraph();
+        //Generate the default CSM graph if it wasn't generated yet
+        if (obj.csmGraph == null || obj.csmGraph.nodes == null)
+        {
+            obj.csmGraph = new SavedVoxelGraph();
+            obj.csmGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode()
+            {
+                guid = GUID.Generate().ToString(),
+                pos = Vector2.zero,
+                type = 6,
+                value = null
+            } };
+            obj.csmGraph.edges = new List<SavedVoxelEdge>();
+        }
+        //Generate the default VoxelDetails graph if it wasn't generated yet
+        if (obj.voxelDetailsGraph == null || obj.voxelDetailsGraph.nodes == null)
+        {
+            obj.voxelDetailsGraph = new SavedVoxelGraph();
+            obj.voxelDetailsGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode()
+            {
+                guid = GUID.Generate().ToString(),
+                pos = Vector2.zero,
+                type = 7,
+                value = null
+            } };
+            obj.voxelDetailsGraph.edges = new List<SavedVoxelEdge>();
+        }
         VoxelGraph.OpenGraphWindow(obj);
-        return true; // we did not handle the open
+        return false;
     }
 
     /// <summary>
@@ -48,8 +74,23 @@ public class VoxelGraphSO : ScriptableObject
     /// </summary>
     public void SaveVoxelGraph(VoxelGraphView graph, VoxelGraphType voxelGraphType) 
     {
-        densityGraph.nodes = new List<SavedVoxelNode>();
-        densityGraph.edges = new List<SavedVoxelEdge>();
+        SavedVoxelGraph savedVoxelGraph = densityGraph;
+        switch (voxelGraphType)
+        {
+            case VoxelGraphType.Density:
+                savedVoxelGraph = densityGraph;
+                break;
+            case VoxelGraphType.CSM:
+                savedVoxelGraph = csmGraph;
+                break;
+            case VoxelGraphType.VoxelDetails:
+                savedVoxelGraph = voxelDetailsGraph;
+                break;
+            default:
+                break;
+        }
+        savedVoxelGraph.nodes = new List<SavedVoxelNode>();
+        savedVoxelGraph.edges = new List<SavedVoxelEdge>();
         //Nodes
         foreach (var node in graph.nodes)
         {
@@ -63,19 +104,19 @@ public class VoxelGraphSO : ScriptableObject
             {
                 savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
             }
-            densityGraph.nodes.Add(savedNode);
+            savedVoxelGraph.nodes.Add(savedNode);
         }
         //Edges
         foreach (var edge in graph.edges)
         {
             SavedVoxelEdge savedEdge = new SavedVoxelEdge()
             {
-                nodeGUID = (((GraphViewNodeData)(edge.input.node.userData))).guid,
-                nodeGUID1 = (((GraphViewNodeData)(edge.output.node.userData))).guid,
-                localPortCount = (((GraphViewPortData)(edge.input.userData))).localPortCount,
-                localPortCount1 = (((GraphViewPortData)(edge.output.userData))).localPortCount,
+                inputNodeGUID = (((GraphViewNodeData)(edge.input.node.userData))).guid,
+                outputNodeGUID = (((GraphViewNodeData)(edge.output.node.userData))).guid,
+                localPortCountInput = (((GraphViewPortData)(edge.input.userData))).localPortCount,
+                localPortCountOutput = (((GraphViewPortData)(edge.output.userData))).localPortCount,
             };
-            densityGraph.edges.Add(savedEdge);
+            savedVoxelGraph.edges.Add(savedEdge);
         }
         //Make sure to save
         EditorUtility.SetDirty(this);
@@ -115,8 +156,8 @@ public class SavedVoxelNode
 public class SavedVoxelEdge
 {
     //Main variables
-    public string nodeGUID;
-    public string nodeGUID1;
-    public int localPortCount;
-    public int localPortCount1;
+    public string inputNodeGUID;
+    public string outputNodeGUID;
+    public int localPortCountInput;
+    public int localPortCountOutput;
 }

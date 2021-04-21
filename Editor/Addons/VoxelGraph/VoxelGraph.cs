@@ -12,9 +12,10 @@ using static VoxelGraphUtility;
 public class VoxelGraph : EditorWindow
 {
     //Main variables
-    private VoxelGraphView graphView;
+    private VoxelGraphView currentGraphView;
     private VisualElement graphViewsHolder;
     private VoxelGraphSO voxelGraphSOData;
+    private VoxelGraphType currentVoxelGraphType;
 
     /// <summary>
     /// Actually creates the graph window
@@ -25,19 +26,35 @@ public class VoxelGraph : EditorWindow
         window.voxelGraphSOData = voxelGraphSOData;
         window.titleContent = new GUIContent("Generation Graph");
         window.GenerateWindow();
+        window.SwitchGraphView("Density Graph", VoxelGraphType.Density);
     }
 
     /// <summary>
     /// Generates the graphview
     /// </summary>
-    private void ConstructGraphView(string name, VoxelGraphType voxelGraphType) 
+    private void SwitchGraphView(string name, VoxelGraphType voxelGraphType) 
     {
-        if(graphViewsHolder.childCount > 0) graphViewsHolder.Remove(graphView);
-        graphView = new VoxelGraphView(voxelGraphType, graphView == null ? Vector3.zero : graphView.viewTransform.position)
+        currentVoxelGraphType = voxelGraphType;
+        if (graphViewsHolder.childCount > 0) graphViewsHolder.Remove(currentGraphView);
+
+        VoxelGraphView graphView = new VoxelGraphView(voxelGraphType, currentGraphView == null ? Vector3.zero : currentGraphView.viewTransform.position) { name = name, };
+
+        switch (voxelGraphType)
         {
-            name = name,
-        };
-        graphView.LoadVoxelGraph(voxelGraphSOData.densityGraph);
+            case VoxelGraphType.Density:
+                graphView.LoadVoxelGraph(voxelGraphSOData.densityGraph);
+                break;
+            case VoxelGraphType.CSM:
+                graphView.LoadVoxelGraph(voxelGraphSOData.csmGraph);
+                break;
+            case VoxelGraphType.VoxelDetails:
+                graphView.LoadVoxelGraph(voxelGraphSOData.voxelDetailsGraph);
+                break;
+            default:
+                break;
+        }
+
+        currentGraphView = graphView;
         graphView.StretchToParentSize();
         graphViewsHolder.Add(graphView);
     }
@@ -49,12 +66,12 @@ public class VoxelGraph : EditorWindow
     {
         //Generate the toolbar
         var toolbar = new Toolbar();
-        Button saveButton = new Button(() => { voxelGraphSOData.SaveVoxelGraph(graphView, graphView.voxelGraphType); }) { text = "Save Graph" };
+        Button saveButton = new Button(() => { voxelGraphSOData.SaveVoxelGraph(currentGraphView, currentVoxelGraphType); }) { text = "Save Graph" };
         Button generateShaderButton = new Button(() => { }) { text = "Generate Shader" };
 
-        Button switchToDensityGraph = new Button(() => { ConstructGraphView("Density Graph", VoxelGraphType.Density); }) { text = "Switch to Density Graph" };
-        Button switchToNormalGraph = new Button(() => { ConstructGraphView("Normal Graph", VoxelGraphType.Normal); }) { text = "Switch to Normal Graph" };
-        Button switchToVoxelDetailsGraph = new Button(() => { ConstructGraphView("Normal Graph", VoxelGraphType.VoxelDetails); }) { text = "Switch to VoxelDetails Graph" };
+        Button switchToDensityGraph = new Button(() => { SwitchGraphView("Density Graph", VoxelGraphType.Density); }) { text = "Switch to Density Graph" };
+        Button switchToNormalGraph = new Button(() => { SwitchGraphView("Normal Graph", VoxelGraphType.CSM);}) { text = "Switch to Color/Smoothness and Metallic Graph" };
+        Button switchToVoxelDetailsGraph = new Button(() => { SwitchGraphView("VoxelDetails Graph", VoxelGraphType.VoxelDetails); }) { text = "Switch to VoxelDetails Graph" };
         //Add the buttons to the toolbar
         toolbar.Add(saveButton);
         toolbar.Add(generateShaderButton);
@@ -65,8 +82,7 @@ public class VoxelGraph : EditorWindow
 
         //Generate the graphViewsHolder
         graphViewsHolder = new VisualElement();
-        graphViewsHolder.StretchToParentSize();
-        ConstructGraphView("Density Graph", VoxelGraphType.Density);
+        graphViewsHolder.StretchToParentSize();        
         rootVisualElement.Add(graphViewsHolder);
         rootVisualElement.Add(toolbar);
     }
