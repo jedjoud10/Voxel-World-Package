@@ -9,9 +9,19 @@ using UnityEngine.UIElements;
 /// <summary>
 /// Voxel node data
 /// </summary>
-public class VoxelNodeData
+public class GraphViewNodeData
 {
     //Main variables
-    public string GUID;
-    public VoxelNodeType obj;
+    public string guid;
+    public int voxelNodeType;
+    public VoxelNode voxelNode;
+}
+
+/// <summary>
+/// Voxel port data
+/// </summary>
+public class GraphViewPortData
+{
+    //Main variables
+    public int localPortCount;
 }

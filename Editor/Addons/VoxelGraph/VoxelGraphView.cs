@@ -14,7 +14,7 @@ public class VoxelGraphView : GraphView
 {
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
-    private readonly List<VoxelNodeType> voxelsNodeTypes = GetAllVoxelNodeTypes();
+    private readonly List<VoxelNode> voxelsNodeTypes = GetAllVoxelNodeTypes();
     public VoxelGraphType voxelGraphType;
 
     /// <summary>
@@ -30,25 +30,22 @@ public class VoxelGraphView : GraphView
         this.AddManipulator(new SelectionDragger());
         this.AddManipulator(new RectangleSelector());
 
-        //Create corresponding result nodes
-        switch (voxelGraphType)
-        {
-            case VoxelGraphType.Density:
-                CreateNode(new Vector2(0, 0), typeof(VNResult));
-                break;
-            case VoxelGraphType.Normal:
-                CreateNode(new Vector2(0, 0), typeof(VNNormalResult));
-                break;
-            case VoxelGraphType.VoxelDetails:
-                CreateNode(new Vector2(0, 0), typeof(VNVoxelDetailsResult));
-                break;
-            default:
-                break;
-        }
-
         var gridBackground = new GridBackground();
         Insert(0, gridBackground);
         gridBackground.StretchToParentSize();
+    }
+
+    /// <summary>
+    /// Load the voxel graph from a saved voxel graph
+    /// </summary>
+    public void LoadVoxelGraph(SavedVoxelGraph savedVoxelGraph) 
+    {
+        //Create the nodes
+        foreach (var node in savedVoxelGraph.nodes)
+        {
+            Node newNode = CreateNode(node.pos, voxelsNodeTypes[node.type].GetType(), guid: node.guid, objValue: node.value);
+            VoxelNode voxelNode = ((GraphViewNodeData)newNode.userData).voxelNode;
+        }
     }
 
     /// <summary>
@@ -59,7 +56,7 @@ public class VoxelGraphView : GraphView
         //Custom context menu items
         if (evt.target is GraphView)
         {
-            foreach (VoxelNodeType voxelNodeType in voxelsNodeTypes)
+            foreach (VoxelNode voxelNodeType in voxelsNodeTypes)
             {
                 if (voxelNodeType is VNResult || voxelNodeType is VNNormalResult || voxelNodeType is VNVoxelDetailsResult) continue;
                 DropdownMenuAction.Status status = DropdownMenuAction.Status.Normal;
@@ -84,36 +81,35 @@ public class VoxelGraphView : GraphView
                 }, status);
             }
 
-            evt.menu.AppendAction("Debug/Debug Nodes", (e) =>
-            {
-                foreach (var item in nodes)
-                {
-                    VoxelNodeData data = (VoxelNodeData)item.userData;
-                    VNConstantFloat constant = data.obj as VNConstantFloat;
-                    if(constant != null) Debug.Log(constant.value);
-                }                
-            });
+            evt.menu.AppendAction("Debug/Debug Nodes", (e) => DebugNodes() );
         }
 
         base.BuildContextualMenu(evt);
     }
+
     /// <summary>
     /// Generate a single node with a specified voxel node type
     /// <summary>
-    private VoxelNodeType CreateNode(Vector2 pos, Type type, List<Port> ports = null) 
+    private Node CreateNode(Vector2 pos, Type type, List<Port> ports = null, string guid = null, object objValue = null) 
     {
+        //Main data
+        GraphViewNodeData data = new GraphViewNodeData()
+        {
+            guid = guid == null ? Guid.NewGuid().ToString() : guid,
+            voxelNode = Activator.CreateInstance(type) as VoxelNode,
+            voxelNodeType = voxelsNodeTypes.FindIndex((x) => x.GetType() == type)
+        };
+        //Set the custom const voxel node data
+        if (objValue != null && data.voxelNode is VNConstants) ((VNConstants)data.voxelNode).objValue = objValue;
+
         var node = new Node
         {
-            userData = new VoxelNodeData() 
-            {
-                GUID = Guid.NewGuid().ToString(),
-                obj = Activator.CreateInstance(type) as VoxelNodeType
-            },
+            userData = data,
         };      
 
         //Generate the output ports
-        var customData = ((VoxelNodeData)node.userData).obj.GetCustomNodeData(node);
-        Type nodeType = ((VoxelNodeData)node.userData).obj.GetType();
+        var customData = data.voxelNode.GetCustomNodeData(node);
+        Type nodeType = data.voxelNode.GetType();
         if (nodeType == typeof(VNResult) || nodeType == typeof(VNNormalResult) || nodeType == typeof(VNVoxelDetailsResult)) node.capabilities &= ~Capabilities.Deletable;
         node.title = customData.Item1;
         foreach (var item in customData.Item2) node.inputContainer.Add(item);
@@ -123,7 +119,19 @@ public class VoxelGraphView : GraphView
         node.RefreshPorts();
         node.SetPosition(new Rect(pos, defaultNodeSize));
         this.AddElement(node);
-        return ((VoxelNodeData)node.userData).obj;
+        return node;
+    }
+
+    /// <summary>
+    /// For debbugging purposes
+    /// </summary>
+    private void DebugNodes() 
+    {
+        foreach (var item in nodes)
+        {
+            GraphViewNodeData data = (GraphViewNodeData)item.userData;
+            if (data.voxelNode is VNConstants) Debug.Log(((VNConstants)data.voxelNode).objValue);
+        }
     }
 
     /// <summary>

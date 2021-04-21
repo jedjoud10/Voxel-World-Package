@@ -31,15 +31,15 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
     ColorSmoothnessMetallic csm = GetCSM(p, id / (float)resolution, normal);
     voxel.color = csm.color;
     voxel.sm = saturate(csm.sm);
-    if (id.x < resolution - 1 && id.y < resolution - 1 && id.z < resolution - 1 && id.x > 1 && id.y > 1 && id.z > 1 && quality == 1)
+    if (id.x < resolution - 1 && id.y < resolution - 1 && id.z < resolution - 1 && id.x > 1 && id.y > 1 && id.z > 1)
     {
         float originDensity = voxel.density;
         float densityX = voxelsBuffer[flt(id + uint3(1, 0, 0))].density;
         float densityY = voxelsBuffer[flt(id + uint3(0, 1, 0))].density;
         float densityZ = voxelsBuffer[flt(id + uint3(0, 0, 1))].density;
-        if (originDensity < 0 ^ densityX < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(1, 0, 0), unlerp(originDensity, densityX, isolevel)) + offset, id / (float)resolution, normal);
-        if (originDensity < 0 ^ densityY < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 1, 0), unlerp(originDensity, densityY, isolevel)) + offset, id / (float)resolution, normal);
-        if (originDensity < 0 ^ densityZ < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 0, 1), unlerp(originDensity, densityZ, isolevel)) + offset, id / (float)resolution, normal);
+        if (originDensity < 0 ^ densityX < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(1, 0, 0), unlerp(originDensity, densityX, isolevel)) * chunkScaling + offset, id / (float)resolution, normal);
+        if (originDensity < 0 ^ densityY < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 1, 0), unlerp(originDensity, densityY, isolevel)) * chunkScaling + offset, id / (float)resolution, normal);
+        if (originDensity < 0 ^ densityZ < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 0, 1), unlerp(originDensity, densityZ, isolevel)) * chunkScaling + offset, id / (float)resolution, normal);
     } 
     voxelsBuffer[index] = voxel;
 }

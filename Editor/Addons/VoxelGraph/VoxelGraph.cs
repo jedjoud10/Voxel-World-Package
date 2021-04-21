@@ -14,14 +14,17 @@ public class VoxelGraph : EditorWindow
     //Main variables
     private VoxelGraphView graphView;
     private VisualElement graphViewsHolder;
+    private VoxelGraphSO voxelGraphSOData;
 
     /// <summary>
     /// Actually creates the graph window
     /// </summary>
-    public static void OpenGraphWindow(VoxelGraphSO VoxelGraphSOData) 
+    public static void OpenGraphWindow(VoxelGraphSO voxelGraphSOData) 
     {
         var window = GetWindow<VoxelGraph>();
+        window.voxelGraphSOData = voxelGraphSOData;
         window.titleContent = new GUIContent("Generation Graph");
+        window.GenerateWindow();
     }
 
     /// <summary>
@@ -34,6 +37,7 @@ public class VoxelGraph : EditorWindow
         {
             name = name,
         };
+        graphView.LoadVoxelGraph(voxelGraphSOData.densityGraph);
         graphView.StretchToParentSize();
         graphViewsHolder.Add(graphView);
     }
@@ -45,8 +49,7 @@ public class VoxelGraph : EditorWindow
     {
         //Generate the toolbar
         var toolbar = new Toolbar();
-        Button saveButton = new Button(() => { }) { text = "Save Graph" };
-        Button loadButton = new Button(() => { }) { text = "Load Graph" };
+        Button saveButton = new Button(() => { voxelGraphSOData.SaveVoxelGraph(graphView, graphView.voxelGraphType); }) { text = "Save Graph" };
         Button generateShaderButton = new Button(() => { }) { text = "Generate Shader" };
 
         Button switchToDensityGraph = new Button(() => { ConstructGraphView("Density Graph", VoxelGraphType.Density); }) { text = "Switch to Density Graph" };
@@ -54,7 +57,6 @@ public class VoxelGraph : EditorWindow
         Button switchToVoxelDetailsGraph = new Button(() => { ConstructGraphView("Normal Graph", VoxelGraphType.VoxelDetails); }) { text = "Switch to VoxelDetails Graph" };
         //Add the buttons to the toolbar
         toolbar.Add(saveButton);
-        toolbar.Add(loadButton);
         toolbar.Add(generateShaderButton);
 
         toolbar.Add(switchToDensityGraph);
@@ -67,13 +69,6 @@ public class VoxelGraph : EditorWindow
         ConstructGraphView("Density Graph", VoxelGraphType.Density);
         rootVisualElement.Add(graphViewsHolder);
         rootVisualElement.Add(toolbar);
-    }
-    /// <summary>
-    /// When this window gets created, generate the voxel graphs
-    /// </summary>
-    private void OnEnable()
-    {
-        GenerateWindow();        
     }
 
     /// <summary>

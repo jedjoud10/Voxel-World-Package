@@ -1,7 +1,7 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel VoxelMain
 #pragma kernel VoxelFinal
-#include "./GenerationShaders/Others/noises/base.cginc"
+#include "./GenerationShaders/Others/base.cginc"
 
 //---Biomes---
 //Mountains
@@ -54,4 +54,4 @@ void PlaceVoxelDetailEdge(float3 p, float3 lp, float3 n)
     
 }
 
-#include "./GenerationShaders/Others/noises/end.cginc"
+#include "./GenerationShaders/Others/end.cginc"

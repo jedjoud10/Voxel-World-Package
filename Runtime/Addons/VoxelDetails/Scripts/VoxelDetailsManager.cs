@@ -8,6 +8,7 @@ using static VoxelUtility;
 public class VoxelDetailsManager : MonoBehaviour
 {
     //Main variables
+    public bool generate;
     public GameObject[] voxelDetailsPrefabs;
     public VoxelDetail[] voxelDetails = new VoxelDetail[0];
     public ComputeBuffer detailsBuffer, countBuffer;
@@ -43,7 +44,8 @@ public class VoxelDetailsManager : MonoBehaviour
     /// </summary>
     public void GetDataFromBuffer(Chunk chunk, OctreeNode node) 
     {
-        if (node.hierarchyIndex != voxelWorld.maxHierarchyIndex) return;
+        if (!generate) return;
+        //if (node.hierarchyIndex != voxelWorld.maxHierarchyIndex) return;
         ComputeBuffer.CopyCount(detailsBuffer, countBuffer, 0);
         int[] count = new int[1] { 0 };
         countBuffer.GetData(count);

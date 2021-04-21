@@ -12,3 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d594a48649797f54db9d489f8e9a4731, type: 3}
   m_Name: NewVoxelGraph
   m_EditorClassIdentifier: 
+  densityGraph:
+    nodes: []
+    edges: []
+  csmGraph:
+    nodes: []
+    edges: []
+  voxelDetailsGraph:
+    nodes: []
+    edges: []

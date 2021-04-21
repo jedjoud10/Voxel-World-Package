@@ -22,7 +22,7 @@ float3 mod7(float3 x) {
 #include "./GenerationShaders/Others/noises/noise3D.cginc"
 #include "./GenerationShaders/Others/noises/erosionnoise.cginc"
 #include "./GenerationShaders/Others/noises/fbmnoises.cginc"
-#include "./GenerationShaders/Others/noises/hashes.cginc"
+#include "./GenerationShaders/Others/hashes.cginc"
 
 
 //Base values

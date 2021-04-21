@@ -15,13 +15,15 @@ public static class VoxelGraphUtility
 {
     #region Base
     /// <summary>
-    /// Main class for "something" (Like noise, a sphere, a cube or anything represented by a density field really)
+    /// Main class for every type of node in the graph
     /// </summary>
-    public abstract class VoxelNodeType
+    public abstract class VoxelNode
     {
         //Main abstract stuff
         abstract public string name { get; }
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
+        protected int portIndex;
+        public int type;
         public List<Port> inputPorts = new List<Port>(), outputPorts = new List<Port>();
         protected Node node;
 
@@ -31,6 +33,7 @@ public static class VoxelGraphUtility
         public virtual Port CreatePort(Direction portDirection, Type type, string name, Port.Capacity capacity = Port.Capacity.Single)
         {            
             Port port = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, type);
+            port.userData = new GraphViewPortData { localPortCount = portIndex };
             port.portName = name;
             switch (portDirection)
             {
@@ -45,6 +48,7 @@ public static class VoxelGraphUtility
                 default:
                     break;
             }
+            portIndex++;
             return port;
         }
 
@@ -73,19 +77,19 @@ public static class VoxelGraphUtility
     /// Gets all of the VoxelGenerationObject classes
     /// </summary>
     /// <returns></returns>
-    public static List<VoxelNodeType> GetAllVoxelNodeTypes()
+    public static List<VoxelNode> GetAllVoxelNodeTypes()
     {
         return AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(assembly => assembly.GetTypes())
-            .Where(type => type.IsSubclassOf(typeof(VoxelNodeType)) && !type.IsAbstract)
-            .Select(type => Activator.CreateInstance(type) as VoxelNodeType)
+            .Where(type => type.IsSubclassOf(typeof(VoxelNode)) && !type.IsAbstract)
+            .Select(type => Activator.CreateInstance(type) as VoxelNode)
             .ToList();
     }
 
     /// <summary>
     /// Position node
     /// </summary>
-    public class VNPosition : VoxelNodeType
+    public class VNPosition : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Position";
@@ -103,7 +107,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Normal node
     /// </summary>
-    public class VNNormal : VoxelNodeType
+    public class VNNormal : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Normal";
@@ -122,7 +126,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Node that tells us the zero-crossing point
     /// </summary>
-    public class VNSurfacePosition : VoxelNodeType
+    public class VNSurfacePosition : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Input/Surface Intersect Position";
@@ -141,7 +145,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Node that tells us the zero-crossing point
     /// </summary>
-    public class VNSurfaceNormal : VoxelNodeType
+    public class VNSurfaceNormal : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Input/Surface Intersect Normal";
@@ -160,7 +164,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Normal node
     /// </summary>
-    public class VNDensity : VoxelNodeType
+    public class VNDensity : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Density";
@@ -179,7 +183,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Result node
     /// </summary>
-    public class VNResult : VoxelNodeType
+    public class VNResult : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Voxel Result";
@@ -198,7 +202,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Normal Result node
     /// </summary>
-    public class VNNormalResult : VoxelNodeType
+    public class VNNormalResult : VoxelNode
     {
         //Main voxel node variables
         public override string name => "Normal Voxel Result";
@@ -218,7 +222,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Voxel Details Result node
     /// </summary>
-    public class VNVoxelDetailsResult : VoxelNodeType
+    public class VNVoxelDetailsResult : VoxelNode
     {
         //Main voxel node variables
         public override string name => "VoxelDetails Result";
@@ -229,6 +233,7 @@ public static class VoxelGraphUtility
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
+            CreatePort(Direction.Input, typeof(bool), "Generate", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(int), "Type", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Rotation", Port.Capacity.Single);
@@ -248,7 +253,10 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Constant voxel nodes
     /// </summary>
-    public abstract class VNConstants : VoxelNodeType { }
+    public abstract class VNConstants : VoxelNode 
+    {
+        public object objValue;
+    }
 
     /// <summary>
     /// Constant float class
@@ -257,17 +265,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Float";
-        public float value;
-
-        /// <summary>
-        /// Creates a new constant port for this node
-        /// </summary>
-        private void CreateInputConstantPort()
-        {
-            var floatField = new FloatField();
-            floatField.RegisterValueChangedCallback(x => { value = x.newValue; });
-            inputVisualElements.Add(floatField);
-        }
+        private FloatField floatField;
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -275,7 +273,13 @@ public static class VoxelGraphUtility
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
-            CreateInputConstantPort();
+
+            floatField = new FloatField();
+            objValue = objValue == null ? 0f : objValue;
+            floatField.value = (float)objValue;
+            floatField.RegisterValueChangedCallback(x => { objValue = x.newValue; });
+            inputVisualElements.Add(floatField);
+
             CreatePort(Direction.Output, typeof(float), "Result", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
@@ -288,23 +292,26 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Vector2";
-        public Vector2 value;
+        private Vector2 val;
 
         /// <summary>
-        /// Creates a new constant port for this node
+        /// Creates all the ports and float fields for this node
         /// </summary>
         private void CreateInputConstantPort()
         {
+            objValue = objValue == null ? Vector2.zero : objValue;
             var floatField = new FloatField();
             var floatField1 = new FloatField();
+            floatField.value = ((Vector2)objValue).x;
+            floatField1.value = ((Vector2)objValue).y;
             Port port = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
             Port port1 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
             port.Add(floatField);
             port1.Add(floatField1);
             inputVisualElements.Add(port);
             inputVisualElements.Add(port1);
-            floatField.RegisterValueChangedCallback(x => { value = new Vector2(x.newValue, 0); });
-            floatField1.RegisterValueChangedCallback(x => { value = new Vector2(0, x.newValue); });
+            floatField.RegisterValueChangedCallback(x => { val.x = x.newValue; objValue = val; });
+            floatField1.RegisterValueChangedCallback(y => { val.y = y.newValue; objValue = val; });
         }
 
         /// <summary>
@@ -326,16 +333,20 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Vector3";
-        public Vector3 value;
+        private Vector3 val;
 
         /// <summary>
-        /// Creates a new constant port for this node
+        /// Creates all the ports and float fields for this node
         /// </summary>
         private void CreateInputConstantPort()
         {
+            objValue = objValue == null ? Vector3.zero : objValue;
             var floatField = new FloatField();
             var floatField1 = new FloatField();
             var floatField2 = new FloatField();
+            floatField.value = ((Vector3)objValue).x;
+            floatField1.value = ((Vector3)objValue).y;
+            floatField2.value = ((Vector3)objValue).z;
             Port port = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
             Port port1 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
             Port port2 = CreatePort(Direction.Input, typeof(float), "Input Z", Port.Capacity.Single);
@@ -345,9 +356,9 @@ public static class VoxelGraphUtility
             inputVisualElements.Add(port);
             inputVisualElements.Add(port1);
             inputVisualElements.Add(port2);
-            floatField.RegisterValueChangedCallback(x => { value = new Vector3(x.newValue, 0, 0); });
-            floatField1.RegisterValueChangedCallback(x => { value = new Vector3(0, x.newValue, 0); });
-            floatField2.RegisterValueChangedCallback(x => { value = new Vector3(0, 0, x.newValue); });
+            floatField.RegisterValueChangedCallback(x => { val.x = x.newValue; objValue = val; });
+            floatField1.RegisterValueChangedCallback(y => { val.y = y.newValue; objValue = val; });
+            floatField2.RegisterValueChangedCallback(z => { val.z = z.newValue; objValue = val; });
         }
 
         /// <summary>
@@ -369,17 +380,21 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Vector4";
-        public Vector4 value;
-
+        private Vector4 val;
         /// <summary>
-        /// Creates a new constant port for this node
+        /// Creates all the ports and float fields for this node
         /// </summary>
         private void CreateInputConstantPort()
         {
+            objValue = objValue == null ? Vector4.zero : objValue;
             var floatField = new FloatField();
             var floatField1 = new FloatField();
             var floatField2 = new FloatField();
             var floatField3 = new FloatField();
+            floatField.value = ((Vector4)objValue).x;
+            floatField1.value = ((Vector4)objValue).y;
+            floatField2.value = ((Vector4)objValue).z;
+            floatField3.value = ((Vector4)objValue).w;
             Port port = CreatePort(Direction.Input, typeof(float), "Input X", Port.Capacity.Single);
             Port port1 = CreatePort(Direction.Input, typeof(float), "Input Y", Port.Capacity.Single);
             Port port2 = CreatePort(Direction.Input, typeof(float), "Input Z", Port.Capacity.Single);
@@ -392,10 +407,10 @@ public static class VoxelGraphUtility
             inputVisualElements.Add(port1);
             inputVisualElements.Add(port2);
             inputVisualElements.Add(port3);
-            floatField.RegisterValueChangedCallback(x => { value = new Vector4(x.newValue, 0, 0, 0); });
-            floatField1.RegisterValueChangedCallback(x => { value = new Vector4(0, x.newValue, 0, 0); });
-            floatField2.RegisterValueChangedCallback(x => { value = new Vector4(0, 0, x.newValue, 0); });
-            floatField3.RegisterValueChangedCallback(x => { value = new Vector4(0, 0, 0, x.newValue); });
+            floatField.RegisterValueChangedCallback(x => { val.x = x.newValue; objValue = val; });
+            floatField1.RegisterValueChangedCallback(y => { val.y = y.newValue; objValue = val; });
+            floatField2.RegisterValueChangedCallback(z => { val.z = z.newValue; objValue = val; });
+            floatField3.RegisterValueChangedCallback(w => { val.w = w.newValue; objValue = val; });
         }
 
         /// <summary>
@@ -409,6 +424,7 @@ public static class VoxelGraphUtility
             return (name, inputVisualElements, outputVisualElements);
         }
     }
+
     /// <summary>
     /// Constant Color class
     /// </summary>
@@ -416,18 +432,6 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Color";
-        public Vector3 value;
-
-        /// <summary>
-        /// Creates a new constant port for this node
-        /// </summary>
-        private void CreateInputConstantPort()
-        {
-            var colorField = new ColorField();
-            colorField.value = Color.white;
-            colorField.RegisterValueChangedCallback(x => { value = new Vector3(x.newValue.r, x.newValue.g, x.newValue.b); });
-            inputVisualElements.Add(colorField);
-        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -435,8 +439,63 @@ public static class VoxelGraphUtility
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
         {
             base.GetCustomNodeData(node);
-            CreateInputConstantPort();
+            objValue = objValue == null ? Vector3.one : objValue;
+            var colorField = new ColorField();
+            colorField.value = new Color(((Vector3)objValue).x, ((Vector3)objValue).y, ((Vector3)objValue).z);
+            colorField.RegisterValueChangedCallback(x => { objValue = new Vector3(x.newValue.r, x.newValue.g, x.newValue.b); });
+            inputVisualElements.Add(colorField);
+
             CreatePort(Direction.Output, typeof(Vector3), "Result", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    /// <summary>
+    /// Constant int class
+    /// </summary>
+    public class VNConstantInt : VNConstants
+    {
+        //Main voxel node variables
+        public override string name => "Constants/Int";
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            objValue = objValue == null ? 0 : objValue;
+            var intField = new IntegerField();
+            intField.value = (int)objValue;
+            intField.RegisterValueChangedCallback(x => { objValue = x.newValue; });
+            inputVisualElements.Add(intField);
+
+            CreatePort(Direction.Output, typeof(int), "Result", Port.Capacity.Multi);
+            return (name, inputVisualElements, outputVisualElements);
+        }
+    }
+
+    /// <summary>
+    /// Constant bool class
+    /// </summary>
+    public class VNConstantBool : VNConstants
+    {
+        //Main voxel node variables
+        public override string name => "Constants/Bool";
+
+        /// <summary>
+        /// Get the custom node data for this specific node
+        /// </summary>
+        public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
+        {
+            base.GetCustomNodeData(node);
+            objValue = objValue == null ? false : objValue;
+            var toggle = new Toggle();
+            toggle.value = (bool)objValue;
+            toggle.RegisterValueChangedCallback(x => { objValue = x.newValue; });
+            inputVisualElements.Add(toggle);
+
+            CreatePort(Direction.Output, typeof(bool), "Result", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
     }
@@ -448,7 +507,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Splitter voxel nodes
     /// </summary>
-    public abstract class VNSplitters : VoxelNodeType { }
+    public abstract class VNSplitters : VoxelNode { }
 
     /// <summary>
     /// Splitter Vector2 class
@@ -522,17 +581,25 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Shapes
     /// </summary>
-    public abstract class VNShape : VoxelNodeType
+    public abstract class VNShape : VoxelNode
     {
     }
 
     /// <summary>
     /// Sphere
     /// </summary>
-    public class VNSphere : VNShape
+    public class VNSphere : VNShape, IBoundCheckOptimizator
     {
         //Main voxel node variables
         public override string name => "SDF Shapes/Sphere";
+
+        /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -542,11 +609,9 @@ public static class VoxelGraphUtility
             base.GetCustomNodeData(node);
             CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Offset", Port.Capacity.Single);
-            CreatePort(Direction.Input, typeof(Vector3), "Color", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(float), "Radius", Port.Capacity.Single);
 
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
-            CreatePort(Direction.Output, typeof(Vector3), "Color", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
     }
@@ -560,6 +625,14 @@ public static class VoxelGraphUtility
         public override string name => "SDF Shapes/Cube";
 
         /// <summary>
+        /// Get the AABB bound for this object
+        /// </summary>
+        public VoxelAABBBound GetAABB()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
         public override (string, List<VisualElement>, List<VisualElement>) GetCustomNodeData(Node node)
@@ -568,7 +641,6 @@ public static class VoxelGraphUtility
             CreatePort(Direction.Input, typeof(Vector3), "Position", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Offset", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Bounds", Port.Capacity.Single);
-            CreatePort(Direction.Input, typeof(Color), "Color", Port.Capacity.Single);
 
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
@@ -581,7 +653,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Constructive-Solid-Geometry operations
     /// </summary>
-    public abstract class VNCSGOperation : VoxelNodeType
+    public abstract class VNCSGOperation : VoxelNode
     {
         //CSG Operation variables
         public float smoothness;
@@ -590,7 +662,7 @@ public static class VoxelGraphUtility
     /// <summary>
     /// Mathematical operations
     /// </summary>
-    public class VNCSGUnion : VoxelNodeType
+    public class VNCSGUnion : VoxelNode
     {
         //Main voxel node variables
         public override string name => "CSG/Union";
@@ -615,15 +687,16 @@ public static class VoxelGraphUtility
 
     #endregion
 
-    #region Mathematical Operation Node Type
+    #region Arithmetic Operation Node Type
 
     /// <summary>
-    /// Mathematical operations
+    /// Arithmetic operations
     /// </summary>
-    public class VNMathAddition : VoxelNodeType
+    //Addition
+    public class VNMathAddition : VoxelNode
     {
         //Main voxel node variables
-        public override string name => "Math/Addition";
+        public override string name => "Math/Arithmetic/Addition";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -637,11 +710,11 @@ public static class VoxelGraphUtility
             return (name, inputVisualElements, outputVisualElements);
         }
     }
-
-    public class VNMathSubtraction : VoxelNodeType
+    //Subtraction
+    public class VNMathSubtraction : VoxelNode
     {
         //Main voxel node variables
-        public override string name => "Math/Subtraction";
+        public override string name => "Math/Arithmetic/Subtraction";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -655,11 +728,11 @@ public static class VoxelGraphUtility
             return (name, inputVisualElements, outputVisualElements);
         }
     }
-
-    public class VNMathMultiplication : VoxelNodeType
+    //Multiplication
+    public class VNMathMultiplication : VoxelNode
     {
         //Main voxel node variables
-        public override string name => "Math/Multiplication";
+        public override string name => "Math/Arithmetic/Multiplication";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -673,11 +746,11 @@ public static class VoxelGraphUtility
             return (name, inputVisualElements, outputVisualElements);
         }
     }
-
-    public class VNMathDivision : VoxelNodeType
+    //Division
+    public class VNMathDivision : VoxelNode
     {
         //Main voxel node variables
-        public override string name => "Math/Division";
+        public override string name => "Math/Arithmetic/Division";
 
         /// <summary>
         /// Get the custom node data for this specific node
