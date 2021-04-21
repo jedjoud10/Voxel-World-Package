@@ -1,57 +1,34 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel VoxelMain
 #pragma kernel VoxelFinal
-#include "./GenerationShaders/Others/base.cginc"
+//Base values
+float3 offset;
+float3 scale;
+float chunkScaling;
+int resolution;
+float quality;
+float isolevel;
 
-//---Biomes---
-//Mountains
-float MountainsBiomeDensity(float3 p)
+//Data stuff
+struct Voxel
 {
-    float density = 0;
-    float noiseDensity = mountain(p.xz * 0.01, 0.2);
-    density = opSmoothUnion((1 - noiseDensity) * 800 + p.y - 450, p.y, 120);
-    return density;
-}
-ColorSmoothnessMetallic MountainsBiomeCSM(float3 p, float3 lp, float3 n)
+    float density;
+    float3 color;
+    float3 normal;
+    float2 sm;
+};
+struct VoxelDetail
 {
-    ColorSmoothnessMetallic csm;
-    csm.color = lerp(0.5, 1, saturate((dot(n, float3(0, 1, 0)) - 0.75) * 10));
-    csm.sm = 0;
-    return csm;
-}
+    float3 position;
+    float3 forward;
+    float size;
+    int type;
+};
+struct ColorSmoothnessMetallic
+{
+    float3 color;
+    float2 sm;
+};
+RWStructuredBuffer<Voxel> voxelsBuffer;
+AppendStructuredBuffer<VoxelDetail> detailsBuffer;
 
-
-//Frozen Lake
-float FrozenLakeBiomeDensity(float3 p) 
-{
-    return p.y;
-}
-ColorSmoothnessMetallic FrozenLakeBiomeCSM(float3 p, float3 lp, float3 n, float noise)
-{
-    ColorSmoothnessMetallic csm;
-    csm.color = lerp(float3(49, 72, 94) / 255, 1, noise);
-    csm.sm = lerp(0.8, 0, noise + snoise(p * 3) * 0.02);
-    return csm;
-}
-
-//Density function
-float Density(float3 p, float3 lp)
-{
-    return FrozenLakeBiomeDensity(p);
-}
-//Get the color, smoothness, and metallic all in one function
-ColorSmoothnessMetallic GetCSM(float3 p, float3 lp, float3 n)
-{
-    ColorSmoothnessMetallic csm;
-    float frozenLakeNoise = saturate(((fbmSnoise(p * 0.01, 0.6, 2.4, 4) + 1) / 2));
-    frozenLakeNoise = saturate(((frozenLakeNoise - 0.5) * 6));
-    //return MountainsBiomeCSM(p, lp, n);
-    return FrozenLakeBiomeCSM(p, lp, n, frozenLakeNoise);
-}
-//This is ran for every intersecting edge in the volume, allows us to place any voxel detail on the surface
-void PlaceVoxelDetailEdge(float3 p, float3 lp, float3 n)
-{
-    
-}
-
-#include "./GenerationShaders/Others/end.cginc"

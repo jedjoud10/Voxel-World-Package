@@ -21,11 +21,15 @@ public static class VoxelGraphUtility
     {
         //Main abstract stuff
         abstract public string name { get; }
+        abstract public string codeRepresentation { get; }
+        public string nodeguid;
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
         protected int portIndex;
         public int type;
         public List<Port> inputPorts = new List<Port>(), outputPorts = new List<Port>(), totalPorts = new List<Port>();
         protected Node node;
+
+        public virtual void Setup(string nodeguid) { this.nodeguid = nodeguid;  }
 
         /// <summary>
         /// Generate a port for a specific node
@@ -94,6 +98,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Position";
+        public override string codeRepresentation => "p";
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -110,8 +115,11 @@ public static class VoxelGraphUtility
     /// </summary>
     public class VNNormal : VoxelNode
     {
+
         //Main voxel node variables
         public override string name => "Input/Voxel Normal";
+
+        public override string codeRepresentation => "n";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -131,7 +139,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Input/Surface Intersect Position";
-
+        public override string codeRepresentation => "sp";
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -150,6 +158,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Input/Surface Intersect Normal";
+        public override string codeRepresentation => "p";
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -169,6 +178,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Input/Voxel Density";
+        public override string codeRepresentation => throw new NotImplementedException();
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -188,7 +198,8 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Voxel Result";
-        
+        public override string codeRepresentation => throw new NotImplementedException();
+
         /// <summary>
         /// Get the custom node data for this specific node
         /// </summary>
@@ -207,6 +218,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "CSM Result";
+        public override string codeRepresentation => throw new NotImplementedException();
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -227,6 +239,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "VoxelDetails Result";
+        public override string codeRepresentation => throw new NotImplementedException();
 
         /// <summary>
         /// Get the custom node data for this specific node
@@ -244,7 +257,7 @@ public static class VoxelGraphUtility
     }
 
     /// <summary>
-    /// Type of VoxelGraph
+    /// Type of VoxelGraphEditorWindow
     /// </summary>
     public enum VoxelGraphType { Density, CSM, VoxelDetails }
     #endregion
@@ -266,6 +279,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Float";
+        public override string codeRepresentation => $"float {nodeguid} = {(float)objValue};";
         private FloatField floatField;
 
         /// <summary>
@@ -293,6 +307,7 @@ public static class VoxelGraphUtility
     {
         //Main voxel node variables
         public override string name => "Constants/Vector2";
+        public override string codeRepresentation => $"float2 {nodeguid} = float2({((Vector2)objValue).x}, {((Vector2)objValue).y});";
         private Vector2 val;
 
         /// <summary>
@@ -656,8 +671,6 @@ public static class VoxelGraphUtility
     /// </summary>
     public abstract class VNCSGOperation : VoxelNode
     {
-        //CSG Operation variables
-        public float smoothness;
     }
 
     /// <summary>

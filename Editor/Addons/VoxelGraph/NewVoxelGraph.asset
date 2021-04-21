@@ -13,11 +13,23 @@ MonoBehaviour:
   m_Name: NewVoxelGraph
   m_EditorClassIdentifier: 
   densityGraph:
-    nodes: []
+    nodes:
+    - guid: b6f66587c9714794fb7ca715cda70ee4
+      pos: {x: 0, y: 0}
+      type: 5
+    - guid: 8a1c9961-000c-41e1-8047-62ee02a73eb3
+      pos: {x: -422, y: 147}
+      type: 18
     edges: []
   csmGraph:
-    nodes: []
+    nodes:
+    - guid: 917d132092f1d2640865386a18f899eb
+      pos: {x: 0, y: 0}
+      type: 6
     edges: []
   voxelDetailsGraph:
-    nodes: []
+    nodes:
+    - guid: cd31738266e4ab24b96341caa6a93398
+      pos: {x: 0, y: 0}
+      type: 7
     edges: []

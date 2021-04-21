@@ -9,7 +9,7 @@ using static VoxelGraphUtility;
 /// <summary>
 /// Actual editor window that handles the editor stuff
 /// </summary>
-public class VoxelGraph : EditorWindow
+public class VoxelGraphEditorWindow : EditorWindow
 {
     //Main variables
     private VoxelGraphView currentGraphView;
@@ -22,7 +22,7 @@ public class VoxelGraph : EditorWindow
     /// </summary>
     public static void OpenGraphWindow(VoxelGraphSO voxelGraphSOData) 
     {
-        var window = GetWindow<VoxelGraph>();
+        var window = GetWindow<VoxelGraphEditorWindow>();
         window.voxelGraphSOData = voxelGraphSOData;
         window.titleContent = new GUIContent("Generation Graph");
         window.GenerateWindow();
@@ -37,7 +37,7 @@ public class VoxelGraph : EditorWindow
         currentVoxelGraphType = voxelGraphType;
         if (graphViewsHolder.childCount > 0) graphViewsHolder.Remove(currentGraphView);
 
-        VoxelGraphView graphView = new VoxelGraphView(voxelGraphType, currentGraphView == null ? Vector3.zero : currentGraphView.viewTransform.position) { name = name, };
+        var graphView = new VoxelGraphView(voxelGraphType, currentGraphView == null ? Vector3.zero : currentGraphView.viewTransform.position) { name = name, };
 
         switch (voxelGraphType)
         {
@@ -66,12 +66,16 @@ public class VoxelGraph : EditorWindow
     {
         //Generate the toolbar
         var toolbar = new Toolbar();
-        Button saveButton = new Button(() => { voxelGraphSOData.SaveVoxelGraph(currentGraphView, currentVoxelGraphType); }) { text = "Save Graph" };
-        Button generateShaderButton = new Button(() => { }) { text = "Generate Shader" };
+        var saveButton = new Button(() => voxelGraphSOData.SaveVoxelGraph(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
+        var generateShaderButton = new Button(() => 
+        {
+            string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
+            CodeConverter.ConvertAndSave(voxelGraphSOData, path);
+        }) { text = "Generate Shader" };
 
-        Button switchToDensityGraph = new Button(() => { SwitchGraphView("Density Graph", VoxelGraphType.Density); }) { text = "Switch to Density Graph" };
-        Button switchToNormalGraph = new Button(() => { SwitchGraphView("Normal Graph", VoxelGraphType.CSM);}) { text = "Switch to Color/Smoothness and Metallic Graph" };
-        Button switchToVoxelDetailsGraph = new Button(() => { SwitchGraphView("VoxelDetails Graph", VoxelGraphType.VoxelDetails); }) { text = "Switch to VoxelDetails Graph" };
+        var switchToDensityGraph = new Button(() => SwitchGraphView("Density Graph", VoxelGraphType.Density)) { text = "Switch to Density Graph" };
+        var switchToNormalGraph = new Button(() => SwitchGraphView("Normal Graph", VoxelGraphType.CSM)) { text = "Switch to Color/Smoothness and Metallic Graph" };
+        var switchToVoxelDetailsGraph = new Button(() => SwitchGraphView("VoxelDetails Graph", VoxelGraphType.VoxelDetails)) { text = "Switch to VoxelDetails Graph" };
         //Add the buttons to the toolbar
         toolbar.Add(saveButton);
         toolbar.Add(generateShaderButton);

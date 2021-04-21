@@ -65,7 +65,7 @@ public class VoxelGraphSO : ScriptableObject
             } };
             obj.voxelDetailsGraph.edges = new List<SavedVoxelEdge>();
         }
-        VoxelGraph.OpenGraphWindow(obj);
+        VoxelGraphEditorWindow.OpenGraphWindow(obj);
         return false;
     }
 
