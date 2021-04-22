@@ -12,11 +12,11 @@ using static VoxelGraphUtility;
 [System.Serializable]
 public class VoxelGraphSO : ScriptableObject
 {
-    [HideInInspector]
+    //[HideInInspector]
     public SavedVoxelGraph densityGraph;
-    [HideInInspector]
+    //[HideInInspector]
     public SavedVoxelGraph csmGraph;
-    [HideInInspector]
+    //[HideInInspector]
     public SavedVoxelGraph voxelDetailsGraph;
 
     /// <summary>
@@ -38,6 +38,7 @@ public class VoxelGraphSO : ScriptableObject
                 value = null
             } };
             obj.densityGraph.edges = new List<SavedVoxelEdge>();
+            obj.densityGraph.inputPorts = new Dictionary<string, string>();
         }
         //Generate the default CSM graph if it wasn't generated yet
         if (obj.csmGraph == null || obj.csmGraph.nodes == null)
@@ -51,6 +52,7 @@ public class VoxelGraphSO : ScriptableObject
                 value = null
             } };
             obj.csmGraph.edges = new List<SavedVoxelEdge>();
+            obj.csmGraph.inputPorts = new Dictionary<string, string>();
         }
         //Generate the default VoxelDetails graph if it wasn't generated yet
         if (obj.voxelDetailsGraph == null || obj.voxelDetailsGraph.nodes == null)
@@ -64,6 +66,7 @@ public class VoxelGraphSO : ScriptableObject
                 value = null
             } };
             obj.voxelDetailsGraph.edges = new List<SavedVoxelEdge>();
+            obj.voxelDetailsGraph.inputPorts = new Dictionary<string, string>();
         }
         VoxelGraphEditorWindow.OpenGraphWindow(obj);
         return false;
@@ -94,12 +97,20 @@ public class VoxelGraphSO : ScriptableObject
         //Nodes
         foreach (var node in graph.nodes)
         {
+            var nodeData = ((GraphViewNodeData)node.userData);
             SavedVoxelNode savedNode = new SavedVoxelNode()
             {
-                guid = ((GraphViewNodeData)node.userData).guid,
+                guid = nodeData.guid,
                 pos = node.GetPosition().position,
-                type = ((GraphViewNodeData)node.userData).voxelNodeType,                
+                type = ((GraphViewNodeData)node.userData).voxelNodeType,   
+                savedPorts = new List<string>(),
             };
+
+            //Save ports
+            foreach (var port in nodeData.voxelNode.savedPorts) savedNode.savedPorts.Add(port);
+
+
+            //Save constant value
             if (((GraphViewNodeData)node.userData).voxelNode is VNConstants) 
             {
                 savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
@@ -111,11 +122,16 @@ public class VoxelGraphSO : ScriptableObject
         {
             SavedVoxelEdge savedEdge = new SavedVoxelEdge()
             {
-                inputNodeGUID = (((GraphViewNodeData)(edge.input.node.userData))).guid,
-                outputNodeGUID = (((GraphViewNodeData)(edge.output.node.userData))).guid,
-                localPortCountInput = (((GraphViewPortData)(edge.input.userData))).localPortCount,
-                localPortCountOutput = (((GraphViewPortData)(edge.output.userData))).localPortCount,
+                input = new SavedVoxelPort()
+                {
+                    portguid = (((GraphViewPortData)(edge.input.userData))).portguid
+                },
+                output = new SavedVoxelPort()
+                {
+                    portguid = (((GraphViewPortData)(edge.output.userData))).portguid
+                },
             };
+            if (!savedVoxelGraph.inputPorts.ContainsKey(savedEdge.input.portguid)) savedVoxelGraph.inputPorts.Add(savedEdge.input.portguid, savedEdge.output.portguid);
             savedVoxelGraph.edges.Add(savedEdge);
         }
         //Make sure to save
@@ -132,6 +148,7 @@ public class SavedVoxelGraph
     //Main variables
     public List<SavedVoxelNode> nodes;
     public List<SavedVoxelEdge> edges;
+    public Dictionary<string, string> inputPorts;//First string is the guid of the input port, second one is for the output port
 }
 
 /// <summary>
@@ -144,6 +161,7 @@ public class SavedVoxelNode
     public string guid;
     public Vector2 pos;
     public int type;
+    public List<string> savedPorts;
 
     //Optional value for constant numbers
     public object value;
@@ -156,8 +174,16 @@ public class SavedVoxelNode
 public class SavedVoxelEdge
 {
     //Main variables
-    public string inputNodeGUID;
-    public string outputNodeGUID;
-    public int localPortCountInput;
-    public int localPortCountOutput;
+    public SavedVoxelPort input;
+    public SavedVoxelPort output;
+}
+
+/// <summary>
+/// A port that was saved in the SavedVoxelGraph
+/// </summary>
+[System.Serializable]
+public class SavedVoxelPort
+{
+    //Main variables
+    public string portguid;
 }

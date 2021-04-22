@@ -42,18 +42,20 @@ public class VoxelGraphView : GraphView
     {
         //Create the nodes
         Dictionary<string, Node> dictionaryNodes = new Dictionary<string, Node>();
-        foreach (var node in savedVoxelGraph.nodes)
+        Dictionary<string, Port> portData = new Dictionary<string, Port>();
+        foreach (var savedVoxelNode in savedVoxelGraph.nodes)
         {
-            Node newNode = CreateNode(node.pos, voxelsNodeTypes[node.type].GetType(), guid: node.guid, objValue: node.value);
-            dictionaryNodes.Add(node.guid, newNode);
+            Node newNode = CreateNode(savedVoxelNode.pos, voxelsNodeTypes[savedVoxelNode.type].GetType(), guid: savedVoxelNode.guid, objValue: savedVoxelNode.value, savedPorts: savedVoxelNode.savedPorts);
+            dictionaryNodes.Add(savedVoxelNode.guid, newNode);
             VoxelNode voxelNode = ((GraphViewNodeData)newNode.userData).voxelNode;
+            foreach (var port in voxelNode.ports) portData.Add(((GraphViewPortData)port.Value.userData).portguid, port.Value);
         }
 
         //Create the edges
-        foreach (var edge in savedVoxelGraph.edges)
+        foreach (var savedVoxelEdge in savedVoxelGraph.edges)
         {
-            Port input = ((GraphViewNodeData)(dictionaryNodes[edge.inputNodeGUID].userData)).voxelNode.totalPorts[edge.localPortCountInput];
-            Port output = ((GraphViewNodeData)(dictionaryNodes[edge.outputNodeGUID].userData)).voxelNode.totalPorts[edge.localPortCountOutput];
+            Port input = portData[savedVoxelEdge.input.portguid];
+            Port output = portData[savedVoxelEdge.output.portguid];
             Edge newEdge = new Edge() { input = input, output = output };
             input.Connect(newEdge);
             output.Connect(newEdge);
@@ -104,17 +106,20 @@ public class VoxelGraphView : GraphView
     /// <summary>
     /// Generate a single node with a specified voxel node type
     /// <summary>
-    private Node CreateNode(Vector2 pos, Type type, List<Port> ports = null, string guid = null, object objValue = null) 
+    private Node CreateNode(Vector2 pos, Type type, string guid = null, object objValue = null, List<string> savedPorts = null) 
     {
+        VoxelNode voxelNode = Activator.CreateInstance(type) as VoxelNode;
+        if (objValue != null && voxelNode is VNConstants) ((VNConstants)voxelNode).objValue = objValue;
         //Main data
         GraphViewNodeData data = new GraphViewNodeData()
         {
             guid = guid == null ? Guid.NewGuid().ToString() : guid,
-            voxelNode = Activator.CreateInstance(type) as VoxelNode,
+            voxelNode = voxelNode,
             voxelNodeType = voxelsNodeTypes.FindIndex((x) => x.GetType() == type)
         };
+
+        voxelNode.Setup(data.guid, savedPorts);
         //Set the custom const voxel node data
-        if (objValue != null && data.voxelNode is VNConstants) ((VNConstants)data.voxelNode).objValue = objValue;
 
         var node = new Node
         {

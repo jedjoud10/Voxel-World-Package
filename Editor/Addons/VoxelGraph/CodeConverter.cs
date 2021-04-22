@@ -142,4 +142,13 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
         }
         AssetDatabase.Refresh();
     }
+    
+    /// <summary>
+    /// Evaluate a specific port
+    /// </summary>
+    public static string EvaluatePort(SavedVoxelGraph graph, string portguid, object defaultObj = null) 
+    {
+        return null;
+        object obj = defaultObj;
+    }
 }
