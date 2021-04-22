@@ -22,7 +22,7 @@ public static class VoxelGraphUtility
         //Main abstract stuff
         abstract public string name { get; }
         abstract public string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid);
-        public string nodeguid;
+        public string nodeGuid;
         public int type;
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
         public Dictionary<string, Port> ports = new Dictionary<string, Port>();
@@ -34,9 +34,9 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Setup this node with a guid and a saved state
         /// </summary>
-        public virtual void Setup(string nodeguid, List<string> savedPorts) 
+        public virtual void Setup(string nodeGuid, List<string> savedPorts) 
         {
-            this.nodeguid = nodeguid;
+            this.nodeGuid = nodeGuid;
             saveLoaded = savedPorts != null;
             this.savedPorts = saveLoaded ? savedPorts : new List<string>();
         }
@@ -379,7 +379,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float {nodeguid} = {(float)objValue};";
+            return $"float {nodeGuid} = {(float)objValue};";
         }
     }
 
@@ -428,7 +428,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float2 {nodeguid} = float2({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector2)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector2)objValue).y)});";
+            return $"float2 {nodeGuid} = float2({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector2)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector2)objValue).y)});";
         }
     }
 
@@ -483,7 +483,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float3 {nodeguid} = float3(" +
+            return $"float3 {nodeGuid} = float3(" +
                 $"{CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, " +
                 $"{CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector3)objValue).y)}, " +
                 $"{CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector3)objValue).z)});";
@@ -546,7 +546,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float4 {nodeguid} = float4({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector4)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector4)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector4)objValue).z)});";
+            return $"float4 {nodeGuid} = float4({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector4)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector4)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector4)objValue).z)});";
         }
     }
 
@@ -578,7 +578,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float3 {nodeguid} = float3({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector3)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector3)objValue).z)});";
+            return $"float3 {nodeGuid} = float3({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector3)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector3)objValue).z)});";
         }
     }
 
@@ -611,7 +611,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"int {nodeguid} = {(int)objValue};";
+            return $"int {nodeGuid} = {(int)objValue};";
         }
     }
 
@@ -644,7 +644,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"bool {nodeguid} = {(bool)objValue};";
+            return $"bool {nodeGuid} = {(bool)objValue};";
         }
     }
 
@@ -685,9 +685,9 @@ public static class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeguid}_x = {((Vector2)objValue).x};";
+                    return $"float {nodeGuid}_x = {((Vector2)objValue).x};";
                 case 2:
-                    return $"float {nodeguid}_y = {((Vector2)objValue).y};";
+                    return $"float {nodeGuid}_y = {((Vector2)objValue).y};";
                 default:
                     return "";
             }            
@@ -722,11 +722,11 @@ public static class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeguid}_x = {((Vector3)objValue).x};";
+                    return $"float {nodeGuid}_x = {((Vector3)objValue).x};";
                 case 2:
-                    return $"float {nodeguid}_y = {((Vector3)objValue).y};";
+                    return $"float {nodeGuid}_y = {((Vector3)objValue).y};";
                 case 3:
-                    return $"float {nodeguid}_z = {((Vector3)objValue).z};";
+                    return $"float {nodeGuid}_z = {((Vector3)objValue).z};";
                 default:
                     return "";
             }
@@ -762,13 +762,13 @@ public static class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeguid}_x = {((Vector4)objValue).x};";
+                    return $"float {nodeGuid}_x = {((Vector4)objValue).x};";
                 case 2:
-                    return $"float {nodeguid}_y = {((Vector4)objValue).y};";
+                    return $"float {nodeGuid}_y = {((Vector4)objValue).y};";
                 case 3:
-                    return $"float {nodeguid}_z = {((Vector4)objValue).z};";
+                    return $"float {nodeGuid}_z = {((Vector4)objValue).z};";
                 case 4:
-                    return $"float {nodeguid}_w = {((Vector4)objValue).w};";
+                    return $"float {nodeGuid}_w = {((Vector4)objValue).w};";
                 default:
                     return "";
             }

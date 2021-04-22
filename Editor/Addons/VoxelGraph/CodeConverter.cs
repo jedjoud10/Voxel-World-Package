@@ -8,6 +8,7 @@ using UnityEditor.Experimental.GraphView;
 using System.IO;
 using static VoxelGraphUtility;
 using static VoxelUtility;
+using System.Linq;
 /// <summary>
 /// Converts a VoxelGraphSO to a compute shader
 /// </summary>
@@ -85,9 +86,14 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
     
 }");
 
+        for (int i = 0; i < 3; i++)
+        {
+            SavedVoxelGraph graph = voxelGraphSO[i];
+            //Start at the default node and traverse the graph
+            string currentNodeGuid = graph.nodes.ElementAt(0).Key;
+            SavedVoxelNode currentNode = graph.nodes.ElementAt(0).Value;
 
-
-
+        }
 
 
         //End
@@ -142,9 +148,9 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
         }
         AssetDatabase.Refresh();
     }
-    
+
     /// <summary>
-    /// Evaluate a specific port
+    /// Evaluate a specific input port
     /// </summary>
     public static string EvaluatePort(SavedVoxelGraph graph, string portguid, object defaultObj = null) 
     {

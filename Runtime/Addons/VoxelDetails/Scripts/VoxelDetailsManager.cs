@@ -23,6 +23,7 @@ public class VoxelDetailsManager : MonoBehaviour
         countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
         voxelWorld.generationShader.SetBuffer(1, "detailsBuffer", detailsBuffer);
     }
+
     /// <summary>
     /// Instantiate voxel details for a specific chunk
     /// </summary>
@@ -35,10 +36,12 @@ public class VoxelDetailsManager : MonoBehaviour
             Instantiate(voxelDetailsPrefabs[voxelDetails[i].type], voxelDetails[i].position, Quaternion.LookRotation(voxelDetails[i].forward), chunk.chunkGameObject.transform);
         }
     }
+
     /// <summary>
     /// Resest the counter value for the detailsBuffer
     /// </summary>
     public void ResetBufferCount() { detailsBuffer.SetCounterValue(0); }
+
     /// <summary>
     /// Gets the VoxelDetails data from the GPU buffer
     /// </summary>
@@ -52,6 +55,7 @@ public class VoxelDetailsManager : MonoBehaviour
         voxelDetails = new VoxelDetail[count[0]];
         detailsBuffer.GetData(voxelDetails);
     }
+
     private void OnDestroy()
     {
         //Release everything

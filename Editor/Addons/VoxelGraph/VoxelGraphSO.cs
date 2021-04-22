@@ -13,12 +13,48 @@ using static VoxelGraphUtility;
 [System.Serializable]
 public class VoxelGraphSO : ScriptableObject
 {
-    //[HideInInspector]
+    //Main graphs variables
     public SavedVoxelGraph densityGraph;
-    //[HideInInspector]
     public SavedVoxelGraph csmGraph;
-    //[HideInInspector]
     public SavedVoxelGraph voxelDetailsGraph;
+
+    //Indexer
+    public SavedVoxelGraph this[int index] 
+    {
+        get 
+        {
+            switch (index)
+            {
+                case 0:
+                    return densityGraph;
+                    break;
+                case 1:
+                    return csmGraph;
+                    break;
+                case 2:
+                    return voxelDetailsGraph;
+                    break;
+                default:
+                    return null;
+            }
+        }
+
+        set
+        {
+            switch (index)
+            {
+                case 0:
+                    densityGraph = value;
+                    break;
+                case 1:
+                    csmGraph = value;
+                    break;
+                case 2:
+                    voxelDetailsGraph = value;
+                    break;
+            }
+        }
+    }
 
     /// <summary>
     /// Opens the voxel graph when double clicking the asset
@@ -122,15 +158,15 @@ public class VoxelGraphSO : ScriptableObject
                 input = new SavedVoxelPort()
                 {
                     portguid = ((GraphViewPortData)(edge.input.userData)).portguid,
-                    nodeguid = ((GraphViewNodeData)edge.input.node.userData).guid
+                    nodeGuid = ((GraphViewNodeData)edge.input.node.userData).guid
                 },
                 output = new SavedVoxelPort()
                 {
                     portguid = ((GraphViewPortData)(edge.output.userData)).portguid,
-                    nodeguid =  ((GraphViewNodeData)edge.output.node.userData).guid
+                    nodeGuid =  ((GraphViewNodeData)edge.output.node.userData).guid
                 },
             };
-            savedVoxelGraph.edges.Add(savedEdge.input.nodeguid, savedEdge);
+            savedVoxelGraph.edges.Add(savedEdge.input.nodeGuid, savedEdge);
         }
         savedVoxelGraph.SaveDictionaries();
         //Make sure to save
@@ -153,6 +189,9 @@ public class SavedVoxelGraph
     public List<SavedVoxelNode> node_values;
     public List<SavedVoxelEdge> edges_values;
 
+    /// <summary>
+    /// Turn the dictionaries into the lists
+    /// </summary>
     public void SaveDictionaries() 
     {
         node_keys = nodes.Keys.ToList();
@@ -161,6 +200,10 @@ public class SavedVoxelGraph
         edges_keys = edges.Keys.ToList();
         edges_values = edges.Values.ToList();
     }
+
+    /// <summary>
+    /// Turn the lists into dictionaries
+    /// </summary>
     public void LoadDictionaries() 
     {
         //https://stackoverflow.com/questions/4038978/map-two-lists-into-a-dictionary-in-c-sharp
@@ -205,6 +248,6 @@ public class SavedVoxelEdge
 public class SavedVoxelPort
 {
     //Main variables
-    public string nodeguid;
+    public string nodeGuid;
     public string portguid;
 }
