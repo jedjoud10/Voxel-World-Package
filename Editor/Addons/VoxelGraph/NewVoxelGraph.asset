@@ -13,11 +13,17 @@ MonoBehaviour:
   m_Name: NewVoxelGraph
   m_EditorClassIdentifier: 
   densityGraph:
-    nodes: []
-    edges: []
+    node_keys: []
+    edges_keys: []
+    node_values: []
+    edges_values: []
   csmGraph:
-    nodes: []
-    edges: []
+    node_keys: []
+    edges_keys: []
+    node_values: []
+    edges_values: []
   voxelDetailsGraph:
-    nodes: []
-    edges: []
+    node_keys: []
+    edges_keys: []
+    node_values: []
+    edges_values: []

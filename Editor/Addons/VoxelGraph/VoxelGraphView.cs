@@ -41,12 +41,13 @@ public class VoxelGraphView : GraphView
     public void LoadVoxelGraph(SavedVoxelGraph savedVoxelGraph) 
     {
         //Create the nodes
+        savedVoxelGraph.LoadDictionaries();
         Dictionary<string, Node> dictionaryNodes = new Dictionary<string, Node>();
         Dictionary<string, Port> portData = new Dictionary<string, Port>();
         foreach (var savedVoxelNode in savedVoxelGraph.nodes)
         {
-            Node newNode = CreateNode(savedVoxelNode.pos, voxelsNodeTypes[savedVoxelNode.type].GetType(), guid: savedVoxelNode.guid, objValue: savedVoxelNode.value, savedPorts: savedVoxelNode.savedPorts);
-            dictionaryNodes.Add(savedVoxelNode.guid, newNode);
+            Node newNode = CreateNode(savedVoxelNode.Value.pos, voxelsNodeTypes[savedVoxelNode.Value.type].GetType(), guid: savedVoxelNode.Key, objValue: savedVoxelNode.Value.value, savedPorts: savedVoxelNode.Value.savedPorts);
+            dictionaryNodes.Add(savedVoxelNode.Key, newNode);
             VoxelNode voxelNode = ((GraphViewNodeData)newNode.userData).voxelNode;
             foreach (var port in voxelNode.ports) portData.Add(((GraphViewPortData)port.Value.userData).portguid, port.Value);
         }
@@ -54,8 +55,8 @@ public class VoxelGraphView : GraphView
         //Create the edges
         foreach (var savedVoxelEdge in savedVoxelGraph.edges)
         {
-            Port input = portData[savedVoxelEdge.input.portguid];
-            Port output = portData[savedVoxelEdge.output.portguid];
+            Port input = portData[savedVoxelEdge.Value.input.portguid];
+            Port output = portData[savedVoxelEdge.Value.output.portguid];
             Edge newEdge = new Edge() { input = input, output = output };
             input.Connect(newEdge);
             output.Connect(newEdge);

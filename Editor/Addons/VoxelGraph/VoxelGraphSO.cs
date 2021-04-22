@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using System.Linq;
 using static VoxelGraphUtility;
 /// <summary>
 /// A scriptable object for the voxel graphs
@@ -30,43 +31,40 @@ public class VoxelGraphSO : ScriptableObject
         if (obj.densityGraph == null || obj.densityGraph.nodes == null) 
         {
             obj.densityGraph = new SavedVoxelGraph();
-            obj.densityGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode() 
+            var defaultNode = new SavedVoxelNode()
             {
-                guid = GUID.Generate().ToString(),
                 pos = Vector2.zero,
                 type = 5,
                 value = null
-            } };
-            obj.densityGraph.edges = new List<SavedVoxelEdge>();
-            obj.densityGraph.inputPorts = new Dictionary<string, string>();
+            };
+            obj.densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            obj.densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
         }
         //Generate the default CSM graph if it wasn't generated yet
         if (obj.csmGraph == null || obj.csmGraph.nodes == null)
         {
             obj.csmGraph = new SavedVoxelGraph();
-            obj.csmGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode()
+            var defaultNode = new SavedVoxelNode()
             {
-                guid = GUID.Generate().ToString(),
                 pos = Vector2.zero,
                 type = 6,
                 value = null
-            } };
-            obj.csmGraph.edges = new List<SavedVoxelEdge>();
-            obj.csmGraph.inputPorts = new Dictionary<string, string>();
+            };
+            obj.csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            obj.csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
         }
         //Generate the default VoxelDetails graph if it wasn't generated yet
         if (obj.voxelDetailsGraph == null || obj.voxelDetailsGraph.nodes == null)
         {
             obj.voxelDetailsGraph = new SavedVoxelGraph();
-            obj.voxelDetailsGraph.nodes = new List<SavedVoxelNode>(1) { new SavedVoxelNode()
+            var defaultNode = new SavedVoxelNode()
             {
-                guid = GUID.Generate().ToString(),
                 pos = Vector2.zero,
                 type = 7,
                 value = null
-            } };
-            obj.voxelDetailsGraph.edges = new List<SavedVoxelEdge>();
-            obj.voxelDetailsGraph.inputPorts = new Dictionary<string, string>();
+            };
+            obj.voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            obj.voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
         }
         VoxelGraphEditorWindow.OpenGraphWindow(obj);
         return false;
@@ -92,15 +90,14 @@ public class VoxelGraphSO : ScriptableObject
             default:
                 break;
         }
-        savedVoxelGraph.nodes = new List<SavedVoxelNode>();
-        savedVoxelGraph.edges = new List<SavedVoxelEdge>();
+        savedVoxelGraph.nodes = new Dictionary<string, SavedVoxelNode>();
+        savedVoxelGraph.edges = new Dictionary<string, SavedVoxelEdge>();
         //Nodes
         foreach (var node in graph.nodes)
         {
             var nodeData = ((GraphViewNodeData)node.userData);
             SavedVoxelNode savedNode = new SavedVoxelNode()
             {
-                guid = nodeData.guid,
                 pos = node.GetPosition().position,
                 type = ((GraphViewNodeData)node.userData).voxelNodeType,   
                 savedPorts = new List<string>(),
@@ -115,7 +112,7 @@ public class VoxelGraphSO : ScriptableObject
             {
                 savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
             }
-            savedVoxelGraph.nodes.Add(savedNode);
+            savedVoxelGraph.nodes.Add(nodeData.guid, savedNode);
         }
         //Edges
         foreach (var edge in graph.edges)
@@ -124,16 +121,18 @@ public class VoxelGraphSO : ScriptableObject
             {
                 input = new SavedVoxelPort()
                 {
-                    portguid = (((GraphViewPortData)(edge.input.userData))).portguid
+                    portguid = ((GraphViewPortData)(edge.input.userData)).portguid,
+                    nodeguid = ((GraphViewNodeData)edge.input.node.userData).guid
                 },
                 output = new SavedVoxelPort()
                 {
-                    portguid = (((GraphViewPortData)(edge.output.userData))).portguid
+                    portguid = ((GraphViewPortData)(edge.output.userData)).portguid,
+                    nodeguid =  ((GraphViewNodeData)edge.output.node.userData).guid
                 },
             };
-            if (!savedVoxelGraph.inputPorts.ContainsKey(savedEdge.input.portguid)) savedVoxelGraph.inputPorts.Add(savedEdge.input.portguid, savedEdge.output.portguid);
-            savedVoxelGraph.edges.Add(savedEdge);
+            savedVoxelGraph.edges.Add(savedEdge.input.nodeguid, savedEdge);
         }
+        savedVoxelGraph.SaveDictionaries();
         //Make sure to save
         EditorUtility.SetDirty(this);
     }
@@ -146,9 +145,31 @@ public class VoxelGraphSO : ScriptableObject
 public class SavedVoxelGraph 
 {
     //Main variables
-    public List<SavedVoxelNode> nodes;
-    public List<SavedVoxelEdge> edges;
-    public Dictionary<string, string> inputPorts;//First string is the guid of the input port, second one is for the output port
+    public Dictionary<string, SavedVoxelNode> nodes;//Uses Node GUID
+    public Dictionary<string, SavedVoxelEdge> edges;//Uses input port GUID
+
+    //Godamnit Unity why aren't dictionaries serializable
+    public List<string> node_keys, edges_keys;
+    public List<SavedVoxelNode> node_values;
+    public List<SavedVoxelEdge> edges_values;
+
+    public void SaveDictionaries() 
+    {
+        node_keys = nodes.Keys.ToList();
+        node_values = nodes.Values.ToList();
+
+        edges_keys = edges.Keys.ToList();
+        edges_values = edges.Values.ToList();
+    }
+    public void LoadDictionaries() 
+    {
+        //https://stackoverflow.com/questions/4038978/map-two-lists-into-a-dictionary-in-c-sharp
+        if (node_keys == null) { node_keys = new List<string>(); node_values = new List<SavedVoxelNode>(); }
+        if (edges_keys == null) { edges_keys = new List<string>(); edges_values = new List<SavedVoxelEdge>(); } ;
+
+        nodes ??= node_keys.Select((k, i) => new { k, v = node_values[i] }).ToDictionary(x => x.k, x => x.v);
+        edges ??= edges_keys.Select((k, i) => new { k, v = edges_values[i] }).ToDictionary(x => x.k, x => x.v);
+    }
 }
 
 /// <summary>
@@ -158,7 +179,6 @@ public class SavedVoxelGraph
 public class SavedVoxelNode 
 {
     //Main variables
-    public string guid;
     public Vector2 pos;
     public int type;
     public List<string> savedPorts;
@@ -185,5 +205,6 @@ public class SavedVoxelEdge
 public class SavedVoxelPort
 {
     //Main variables
+    public string nodeguid;
     public string portguid;
 }

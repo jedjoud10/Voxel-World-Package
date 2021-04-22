@@ -786,7 +786,7 @@ public static class VoxelGraphUtility
     }
 
     /// <summary>
-    /// Sphere
+    /// Sphere adas
     /// </summary>
     public class VNSphere : VNShape, IBoundCheckOptimizator
     {
