@@ -13,27 +13,65 @@ using static VoxelGraphUtility;
 [System.Serializable]
 public class VoxelGraphSO : ScriptableObject
 {
+    public SavedGlobalVoxelGraph globalVoxelGraph;
+
+    /// <summary>
+    /// Opens the voxel graph when double clicking the asset
+    /// </summary>
+    [OnOpenAsset(0)]
+    public static bool OpenVoxelGraph(int instanceID, int line)
+    {
+        VoxelGraphSO obj = (VoxelGraphSO)EditorUtility.InstanceIDToObject(instanceID);
+        if (!obj.globalVoxelGraph.defaultSet) obj.globalVoxelGraph.SetDefaultVars();
+        VoxelGraphEditorWindow.OpenGraphWindow(obj);
+        return false;
+    }
+    /// <summary>
+    /// Wrapper around the saved global voxel graph to save part of it
+    /// </summary>
+    public void Save(VoxelGraphView graph, VoxelGraphType type) 
+    {
+        graph.SaveLocalVoxelGraph(globalVoxelGraph[type]);
+        //Make sure to save
+        EditorUtility.SetDirty(this);
+    }
+
+    /// <summary>
+    /// Wrapper around the saved global voxel graph to save part of it
+    /// </summary>
+    public void SaveAskUser(VoxelGraphView graph, VoxelGraphType type, string message)
+    {
+        graph.SaveLocalVoxelGraph(globalVoxelGraph[type], message);
+        //Make sure to save
+        EditorUtility.SetDirty(this);
+    }
+
+}
+/// <summary>
+/// A whole voxel graph that's going to get wrapped
+/// </summary>
+[System.Serializable]
+public class SavedGlobalVoxelGraph 
+{
     //Main graphs variables
-    public SavedVoxelGraph densityGraph;
-    public SavedVoxelGraph csmGraph;
-    public SavedVoxelGraph voxelDetailsGraph;
+    public bool defaultSet;
+    public SavedLocalVoxelGraph densityGraph;
+    public SavedLocalVoxelGraph csmGraph;
+    public SavedLocalVoxelGraph voxelDetailsGraph;
 
     //Indexer
-    public SavedVoxelGraph this[int index] 
+    public SavedLocalVoxelGraph this[int index]
     {
-        get 
+        get
         {
             switch (index)
             {
                 case 0:
                     return densityGraph;
-                    break;
                 case 1:
                     return csmGraph;
-                    break;
                 case 2:
                     return voxelDetailsGraph;
-                    break;
                 default:
                     return null;
             }
@@ -55,130 +93,87 @@ public class VoxelGraphSO : ScriptableObject
             }
         }
     }
-
-    /// <summary>
-    /// Opens the voxel graph when double clicking the asset
-    /// </summary>
-    [OnOpenAsset(0)]
-    public static bool OpenVoxelGraph(int instanceID, int line)
+    public SavedLocalVoxelGraph this[VoxelGraphType type]
     {
-        VoxelGraphSO obj = (VoxelGraphSO)EditorUtility.InstanceIDToObject(instanceID);
-        //Generate the default Density graph if it wasn't generated yet
-        if (obj.densityGraph == null || obj.densityGraph.nodes == null) 
+        get
         {
-            obj.densityGraph = new SavedVoxelGraph();
-            var defaultNode = new SavedVoxelNode()
+            switch (type)
             {
-                pos = Vector2.zero,
-                type = 5,
-                value = null
-            };
-            obj.densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
-            obj.densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
-        }
-        //Generate the default CSM graph if it wasn't generated yet
-        if (obj.csmGraph == null || obj.csmGraph.nodes == null)
-        {
-            obj.csmGraph = new SavedVoxelGraph();
-            var defaultNode = new SavedVoxelNode()
-            {
-                pos = Vector2.zero,
-                type = 6,
-                value = null
-            };
-            obj.csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
-            obj.csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
-        }
-        //Generate the default VoxelDetails graph if it wasn't generated yet
-        if (obj.voxelDetailsGraph == null || obj.voxelDetailsGraph.nodes == null)
-        {
-            obj.voxelDetailsGraph = new SavedVoxelGraph();
-            var defaultNode = new SavedVoxelNode()
-            {
-                pos = Vector2.zero,
-                type = 7,
-                value = null
-            };
-            obj.voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
-            obj.voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
-        }
-        VoxelGraphEditorWindow.OpenGraphWindow(obj);
-        return false;
-    }
-
-    /// <summary>
-    /// Save a specific voxel graph
-    /// </summary>
-    public void SaveVoxelGraph(VoxelGraphView graph, VoxelGraphType voxelGraphType) 
-    {
-        SavedVoxelGraph savedVoxelGraph = densityGraph;
-        switch (voxelGraphType)
-        {
-            case VoxelGraphType.Density:
-                savedVoxelGraph = densityGraph;
-                break;
-            case VoxelGraphType.CSM:
-                savedVoxelGraph = csmGraph;
-                break;
-            case VoxelGraphType.VoxelDetails:
-                savedVoxelGraph = voxelDetailsGraph;
-                break;
-            default:
-                break;
-        }
-        savedVoxelGraph.nodes = new Dictionary<string, SavedVoxelNode>();
-        savedVoxelGraph.edges = new Dictionary<string, SavedVoxelEdge>();
-        //Nodes
-        foreach (var node in graph.nodes)
-        {
-            var nodeData = ((GraphViewNodeData)node.userData);
-            SavedVoxelNode savedNode = new SavedVoxelNode()
-            {
-                pos = node.GetPosition().position,
-                type = ((GraphViewNodeData)node.userData).voxelNodeType,   
-                savedPorts = new List<string>(),
-            };
-
-            //Save ports
-            foreach (var port in nodeData.voxelNode.savedPorts) savedNode.savedPorts.Add(port);
-
-
-            //Save constant value
-            if (((GraphViewNodeData)node.userData).voxelNode is VNConstants) 
-            {
-                savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
+                case VoxelGraphType.Density:
+                    return densityGraph;
+                case VoxelGraphType.CSM:
+                    return csmGraph;
+                case VoxelGraphType.VoxelDetails:
+                    return voxelDetailsGraph;
+                default:
+                    return null;
             }
-            savedVoxelGraph.nodes.Add(nodeData.guid, savedNode);
         }
-        //Edges
-        foreach (var edge in graph.edges)
+
+        set
         {
-            SavedVoxelEdge savedEdge = new SavedVoxelEdge()
+            switch (type)
             {
-                input = new SavedVoxelPort()
-                {
-                    portguid = ((GraphViewPortData)(edge.input.userData)).portguid,
-                    nodeGuid = ((GraphViewNodeData)edge.input.node.userData).guid
-                },
-                output = new SavedVoxelPort()
-                {
-                    portguid = ((GraphViewPortData)(edge.output.userData)).portguid,
-                    nodeGuid =  ((GraphViewNodeData)edge.output.node.userData).guid
-                },
-            };
-            savedVoxelGraph.edges.Add(savedEdge.input.nodeGuid, savedEdge);
+                case VoxelGraphType.Density:
+                    densityGraph = value;
+                    break;
+                case VoxelGraphType.CSM:
+                    csmGraph = value;
+                    break;
+                case VoxelGraphType.VoxelDetails:
+                    voxelDetailsGraph = value;
+                    break;
+            }
         }
-        savedVoxelGraph.SaveDictionaries();
-        //Make sure to save
-        EditorUtility.SetDirty(this);
     }
+
+    /// <summary>
+    /// Make sure the default nodes are present in the local graphs
+    /// </summary>
+    public void SetDefaultVars() 
+    {       
+        //Generate the default Density graph node
+        densityGraph = new SavedLocalVoxelGraph();
+        var defaultNode = new SavedVoxelNode()
+        {
+            pos = Vector2.zero,
+            type = 5,
+            value = null
+        };
+        densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+        densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
+
+        //Generate the default CSM graph if it wasn't generated yet
+        csmGraph = new SavedLocalVoxelGraph();
+        defaultNode = new SavedVoxelNode()
+        {
+            pos = Vector2.zero,
+            type = 6,
+            value = null
+        };
+        csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+        csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
+        
+        //Generate the default VoxelDetails graph if it wasn't generated yet        
+        voxelDetailsGraph = new SavedLocalVoxelGraph();
+        defaultNode = new SavedVoxelNode()
+        {
+            pos = Vector2.zero,
+            type = 7,
+            value = null
+        };
+        voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+        voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
+
+        defaultSet = true;
+    }    
 }
 
 /// <summary>
-/// A saved voxel graph
+/// A saved local voxel graph (like density graph / csm graph / voxeldetails graph)
 /// </summary>
 [System.Serializable]
-public class SavedVoxelGraph 
+public class SavedLocalVoxelGraph 
 {
     //Main variables
     public Dictionary<string, SavedVoxelNode> nodes;//Uses Node GUID
@@ -212,6 +207,32 @@ public class SavedVoxelGraph
 
         nodes ??= node_keys.Select((k, i) => new { k, v = node_values[i] }).ToDictionary(x => x.k, x => x.v);
         edges ??= edges_keys.Select((k, i) => new { k, v = edges_values[i] }).ToDictionary(x => x.k, x => x.v);
+    }
+}
+
+/// <summary>
+/// Custom IEqualityComparer from https://stackoverflow.com/questions/6413108/how-do-i-check-if-two-objects-are-equal-in-terms-of-their-properties-only-withou
+/// </summary>
+class SavedVoxelNodeComparer : IEqualityComparer<KeyValuePair<string, SavedVoxelNode>>
+{
+
+    public bool Equals(KeyValuePair<string, SavedVoxelNode> x, KeyValuePair<string, SavedVoxelNode> y)
+    {
+        if (x.Value == null || y.Key == null)
+            return false;
+
+        bool position = x.Value.pos == y.Value.pos;
+        bool type = x.Value.type == y.Value.type;
+        bool savedPorts = x.Value.savedPorts.SequenceEqual(y.Value.savedPorts);
+        bool key = x.Key == y.Key;
+
+        return (key && position && type && savedPorts);
+        throw new System.NotImplementedException();
+    }
+
+    public int GetHashCode(KeyValuePair<string, SavedVoxelNode> obj)
+    {
+        throw new System.NotImplementedException();
     }
 }
 

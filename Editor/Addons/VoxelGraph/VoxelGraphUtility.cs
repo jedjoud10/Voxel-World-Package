@@ -21,7 +21,6 @@ public static class VoxelGraphUtility
     {
         //Main abstract stuff
         abstract public string name { get; }
-        abstract public string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid);
         public string nodeGuid;
         public int type;
         protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
@@ -50,8 +49,8 @@ public static class VoxelGraphUtility
             GraphViewPortData graphViewPortData;
 
             //Load from saved ports if we are allowed to
-            if (saveLoaded) graphViewPortData = new GraphViewPortData { portguid = savedPorts[portCount] };
-            else graphViewPortData = new GraphViewPortData { portguid = Guid.NewGuid().ToString() };       
+            if (saveLoaded) graphViewPortData = new GraphViewPortData { portGuid = savedPorts[portCount] };
+            else graphViewPortData = new GraphViewPortData { portGuid = Guid.NewGuid().ToString() };       
             
             //Set variables
             graphViewPortData.localPortIndex = portCount;
@@ -71,8 +70,8 @@ public static class VoxelGraphUtility
             }
 
             //Save the ports
-            ports.Add(graphViewPortData.portguid, port);
-            if (!saveLoaded) savedPorts.Add(graphViewPortData.portguid);
+            ports.Add(graphViewPortData.portGuid, port);
+            if (!saveLoaded) savedPorts.Add(graphViewPortData.portGuid);
 
             portCount++;
             return port;
@@ -85,6 +84,15 @@ public static class VoxelGraphUtility
         {
             this.node = node;
             return ("None", inputVisualElements, outputVisualElements);
+        }
+
+        /// <summary>
+        /// Get the code representation of a specific node
+        /// </summary>
+        public virtual string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid) 
+        {
+            Debug.Log(portguid);
+            throw new NotImplementedException();
         }
     }
 
@@ -99,11 +107,13 @@ public static class VoxelGraphUtility
         public VoxelAABBBound GetAABB();
     }
 
+    public static List<VoxelNode> voxelNodes = GetAllVoxelNodeTypes();
+
     /// <summary>
     /// Gets all of the VoxelGenerationObject classes
     /// </summary>
     /// <returns></returns>
-    public static List<VoxelNode> GetAllVoxelNodeTypes()
+    private static List<VoxelNode> GetAllVoxelNodeTypes()
     {
         return AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(assembly => assembly.GetTypes())
@@ -132,7 +142,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return "p";
         }
@@ -160,7 +170,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return "n";
         }
@@ -186,7 +196,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return "sp";
         }
@@ -213,7 +223,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return "sn";
         }
@@ -235,14 +245,6 @@ public static class VoxelGraphUtility
             base.GetCustomNodeData(node);
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
-        }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
         }
     }
 
@@ -267,9 +269,9 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
-            throw new NotImplementedException();
+            return $"float density = {CodeConverter.EvaluatePort(savedVoxelGraph, portguid, 0f)};";
         }
     }
 
@@ -290,14 +292,6 @@ public static class VoxelGraphUtility
             CreatePort(Direction.Input, typeof(Vector2), "Smoothness and Metallic", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Color", Port.Capacity.Single);
             return (name, inputVisualElements, outputVisualElements);
-        }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
         }
     }
 
@@ -321,14 +315,6 @@ public static class VoxelGraphUtility
             CreatePort(Direction.Input, typeof(Vector3), "Rotation", Port.Capacity.Single);
             CreatePort(Direction.Input, typeof(Vector3), "Scale", Port.Capacity.Single);
             return (name, inputVisualElements, outputVisualElements);
-        }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
         }
     }
 
@@ -377,7 +363,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"float {nodeGuid} = {(float)objValue};";
         }
@@ -426,7 +412,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"float2 {nodeGuid} = float2({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector2)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector2)objValue).y)});";
         }
@@ -481,7 +467,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"float3 {nodeGuid} = float3(" +
                 $"{CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, " +
@@ -544,7 +530,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"float4 {nodeGuid} = float4({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector4)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector4)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector4)objValue).z)});";
         }
@@ -576,7 +562,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"float3 {nodeGuid} = float3({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector3)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector3)objValue).z)});";
         }
@@ -609,7 +595,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"int {nodeGuid} = {(int)objValue};";
         }
@@ -642,7 +628,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             return $"bool {nodeGuid} = {(bool)objValue};";
         }
@@ -680,7 +666,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
@@ -717,7 +703,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
@@ -757,7 +743,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
@@ -813,14 +799,6 @@ public static class VoxelGraphUtility
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     /// <summary>
@@ -850,14 +828,6 @@ public static class VoxelGraphUtility
 
             CreatePort(Direction.Output, typeof(float), "Density", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
-        }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
         }
     }
 
@@ -894,14 +864,6 @@ public static class VoxelGraphUtility
             CreatePort(Direction.Output, typeof(Vector3), "Result Color", Port.Capacity.Multi);
             return (name, inputVisualElements, outputVisualElements);
         }
-
-        /// <summary>
-        /// Return the code representation for this node
-        /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
-        {
-            throw new NotImplementedException();
-        }
     }
 
     #endregion
@@ -931,7 +893,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             throw new NotImplementedException();
         }
@@ -956,7 +918,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             throw new NotImplementedException();
         }
@@ -981,7 +943,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             throw new NotImplementedException();
         }
@@ -1006,7 +968,7 @@ public static class VoxelGraphUtility
         /// <summary>
         /// Return the code representation for this node
         /// </summary>
-        public override string CodeRepresentationPort(SavedVoxelGraph savedVoxelGraph, string portguid)
+        public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
             throw new NotImplementedException();
         }

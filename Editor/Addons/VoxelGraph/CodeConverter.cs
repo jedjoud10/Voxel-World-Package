@@ -14,12 +14,15 @@ using System.Linq;
 /// </summary>
 public static class CodeConverter
 {
+
+    public static Dictionary<string, object> variables = new Dictionary<string, object>();
     /// <summary>
     /// Convert the VoxelGraphSO to a string that is going to be used as compute shader
     /// </summary>
     /// <param name="voxelGraphSO"></param>
     public static void ConvertAndSave(VoxelGraphSO voxelGraphSO, string path) 
-    {
+    {        
+        
         StringBuilder builder = new StringBuilder();
         //Start
         builder.Append(@"
@@ -86,15 +89,20 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
     
 }");
 
-        for (int i = 0; i < 3; i++)
+        StringBuilder stringBuilderGraph = new StringBuilder();
+        for (int i = 0; i < 1; i++)
         {
-            SavedVoxelGraph graph = voxelGraphSO[i];
+            SavedLocalVoxelGraph graph = voxelGraphSO.globalVoxelGraph[i];
             //Start at the default node and traverse the graph
             string currentNodeGuid = graph.nodes.ElementAt(0).Key;
             SavedVoxelNode currentNode = graph.nodes.ElementAt(0).Value;
-
+            VoxelNode voxelNode = voxelNodes[currentNode.type];            
+            string currentLine = voxelNode.CodeRepresentationPort(graph, currentNode.savedPorts[0]);
+            Debug.Log(currentLine);
+            
         }
 
+        builder.Append(stringBuilderGraph.ToString());
 
         //End
         builder.Append(@"
@@ -152,7 +160,7 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
     /// <summary>
     /// Evaluate a specific input port
     /// </summary>
-    public static string EvaluatePort(SavedVoxelGraph graph, string portguid, object defaultObj = null) 
+    public static string EvaluatePort(SavedLocalVoxelGraph graph, string portguid, object defaultObj = null) 
     {
         return null;
         object obj = defaultObj;

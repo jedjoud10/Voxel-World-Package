@@ -14,7 +14,7 @@ public class VoxelGraphView : GraphView
 {
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
-    private readonly List<VoxelNode> voxelsNodeTypes = GetAllVoxelNodeTypes();
+    private readonly List<VoxelNode> voxelsNodeTypes = voxelNodes;
     public VoxelGraphType voxelGraphType;
 
     /// <summary>
@@ -36,9 +36,9 @@ public class VoxelGraphView : GraphView
     }
 
     /// <summary>
-    /// Load the voxel graph from a saved voxel graph
+    /// Load the local voxel graph from a saved voxel graph
     /// </summary>
-    public void LoadVoxelGraph(SavedVoxelGraph savedVoxelGraph) 
+    public void LoadLocalVoxelGraph(SavedLocalVoxelGraph savedVoxelGraph) 
     {
         //Create the nodes
         savedVoxelGraph.LoadDictionaries();
@@ -49,7 +49,7 @@ public class VoxelGraphView : GraphView
             Node newNode = CreateNode(savedVoxelNode.Value.pos, voxelsNodeTypes[savedVoxelNode.Value.type].GetType(), guid: savedVoxelNode.Key, objValue: savedVoxelNode.Value.value, savedPorts: savedVoxelNode.Value.savedPorts);
             dictionaryNodes.Add(savedVoxelNode.Key, newNode);
             VoxelNode voxelNode = ((GraphViewNodeData)newNode.userData).voxelNode;
-            foreach (var port in voxelNode.ports) portData.Add(((GraphViewPortData)port.Value.userData).portguid, port.Value);
+            foreach (var port in voxelNode.ports) portData.Add(((GraphViewPortData)port.Value.userData).portGuid, port.Value);
         }
 
         //Create the edges
@@ -61,8 +61,88 @@ public class VoxelGraphView : GraphView
             input.Connect(newEdge);
             output.Connect(newEdge);
             this.Add(newEdge);
+        }        
+    }
+
+    /// <summary>
+    /// Save a specific voxel graph
+    /// </summary>
+    public void SaveLocalVoxelGraph(SavedLocalVoxelGraph reference)
+    {        
+        SavedLocalVoxelGraph savedVoxelGraph = reference;
+        savedVoxelGraph.nodes = new Dictionary<string, SavedVoxelNode>();
+        savedVoxelGraph.edges = new Dictionary<string, SavedVoxelEdge>();
+        //Nodes
+        foreach (var node in nodes)
+        {
+            var nodeData = ((GraphViewNodeData)node.userData);
+            SavedVoxelNode savedNode = new SavedVoxelNode()
+            {
+                pos = node.GetPosition().position,
+                type = ((GraphViewNodeData)node.userData).voxelNodeType,
+                savedPorts = new List<string>(),
+            };
+
+            //Save ports
+            foreach (var port in nodeData.voxelNode.savedPorts) savedNode.savedPorts.Add(port);
+
+            //Save constant value
+            if (((GraphViewNodeData)node.userData).voxelNode is VNConstants)
+            {
+                savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
+            }
+            savedVoxelGraph.nodes.Add(nodeData.guid, savedNode);
         }
-        
+        //Edges
+        foreach (var edge in edges)
+        {
+            SavedVoxelEdge savedEdge = new SavedVoxelEdge()
+            {
+                input = new SavedVoxelPort()
+                {
+                    portguid = ((GraphViewPortData)(edge.input.userData)).portGuid,
+                    nodeGuid = ((GraphViewNodeData)edge.input.node.userData).guid
+                },
+                output = new SavedVoxelPort()
+                {
+                    portguid = ((GraphViewPortData)(edge.output.userData)).portGuid,
+                    nodeGuid = ((GraphViewNodeData)edge.output.node.userData).guid
+                },
+            };
+            savedVoxelGraph.edges.Add(savedEdge.input.nodeGuid, savedEdge);
+        }
+        savedVoxelGraph.SaveDictionaries();
+    }
+
+    /// <summary>
+    /// Save a specific voxel graph after asking the user
+    /// </summary>
+    public void SaveLocalVoxelGraph(SavedLocalVoxelGraph reference, string message)
+    {
+        SavedLocalVoxelGraph newReference = new SavedLocalVoxelGraph();
+        SaveLocalVoxelGraph(newReference);
+
+        //Check if we have a different count, if so then it means it's different
+        bool differentCount = (newReference.nodes.Count != reference.nodes.Count || newReference.edges.Count != reference.edges.Count);
+        bool differentElements = false;
+
+        SavedVoxelNodeComparer comparer = new SavedVoxelNodeComparer();
+        differentElements = !newReference.nodes.SequenceEqual(reference.nodes, comparer);
+        bool different = differentCount || differentElements;
+
+        if (different)
+        {
+            if (EditorUtility.DisplayDialog("Want to save?", message, "Yes", "No")) 
+            {
+                reference.edges = newReference.edges;
+                reference.nodes = newReference.nodes;
+            }
+        }
+        else
+        {
+            reference.edges = newReference.edges;
+            reference.nodes = newReference.nodes;
+        }
     }
 
     /// <summary>

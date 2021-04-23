@@ -23,6 +23,6 @@ public class GraphViewNodeData
 public class GraphViewPortData
 {
     //Main variables
-    public string portguid;
+    public string portGuid;
     public int localPortIndex;
 }

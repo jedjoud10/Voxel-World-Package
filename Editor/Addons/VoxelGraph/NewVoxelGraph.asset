@@ -12,18 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d594a48649797f54db9d489f8e9a4731, type: 3}
   m_Name: NewVoxelGraph
   m_EditorClassIdentifier: 
-  densityGraph:
-    node_keys: []
-    edges_keys: []
-    node_values: []
-    edges_values: []
-  csmGraph:
-    node_keys: []
-    edges_keys: []
-    node_values: []
-    edges_values: []
-  voxelDetailsGraph:
-    node_keys: []
-    edges_keys: []
-    node_values: []
-    edges_values: []
+  globalVoxelGraph:
+    defaultSet: 0
+    densityGraph:
+      node_keys: []
+      edges_keys: []
+      node_values: []
+      edges_values: []
+    csmGraph:
+      node_keys: []
+      edges_keys: []
+      node_values: []
+      edges_values: []
+    voxelDetailsGraph:
+      node_keys: []
+      edges_keys: []
+      node_values: []
+      edges_values: []

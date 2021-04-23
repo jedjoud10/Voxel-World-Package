@@ -26,7 +26,7 @@ public class VoxelGraphEditorWindow : EditorWindow
         window.voxelGraphSOData = voxelGraphSOData;
         window.titleContent = new GUIContent("Generation Graph");
         window.GenerateWindow();
-        window.SwitchGraphView("Density Graph", VoxelGraphType.Density);
+        window.SwitchGraphView("First Graph", VoxelGraphType.Density);
     }
 
     /// <summary>
@@ -34,21 +34,24 @@ public class VoxelGraphEditorWindow : EditorWindow
     /// </summary>
     private void SwitchGraphView(string name, VoxelGraphType voxelGraphType) 
     {
-        currentVoxelGraphType = voxelGraphType;
+        //Save the old graph view
+        if(name != "First Graph") voxelGraphSOData.SaveAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to save this VoxelGraph?");
+
         if (graphViewsHolder.childCount > 0) graphViewsHolder.Remove(currentGraphView);
+        currentVoxelGraphType = voxelGraphType;
 
         var graphView = new VoxelGraphView(voxelGraphType, currentGraphView == null ? Vector3.zero : currentGraphView.viewTransform.position) { name = name, };
 
         switch (voxelGraphType)
         {
             case VoxelGraphType.Density:
-                graphView.LoadVoxelGraph(voxelGraphSOData.densityGraph);
+                graphView.LoadLocalVoxelGraph(voxelGraphSOData.globalVoxelGraph.densityGraph);
                 break;
             case VoxelGraphType.CSM:
-                graphView.LoadVoxelGraph(voxelGraphSOData.csmGraph);
+                graphView.LoadLocalVoxelGraph(voxelGraphSOData.globalVoxelGraph.csmGraph);
                 break;
             case VoxelGraphType.VoxelDetails:
-                graphView.LoadVoxelGraph(voxelGraphSOData.voxelDetailsGraph);
+                graphView.LoadLocalVoxelGraph(voxelGraphSOData.globalVoxelGraph.voxelDetailsGraph);
                 break;
             default:
                 break;
@@ -66,11 +69,11 @@ public class VoxelGraphEditorWindow : EditorWindow
     {
         //Generate the toolbar
         var toolbar = new Toolbar();
-        var saveButton = new Button(() => voxelGraphSOData.SaveVoxelGraph(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
+        var saveButton = new Button(() => voxelGraphSOData.Save(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
         var generateShaderButton = new Button(() => 
         {
-            string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
-            CodeConverter.ConvertAndSave(voxelGraphSOData, path);
+            ///string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
+            CodeConverter.ConvertAndSave(voxelGraphSOData, "Asset/DefaultComputeShader.compute");
         }) { text = "Generate Shader" };
 
         var switchToDensityGraph = new Button(() => SwitchGraphView("Density Graph", VoxelGraphType.Density)) { text = "Switch to Density Graph" };
@@ -96,6 +99,8 @@ public class VoxelGraphEditorWindow : EditorWindow
     /// </summary>
     private void OnDisable()
     {
+        voxelGraphSOData.SaveAskUser(currentGraphView, currentVoxelGraphType, @"Are you sure you want to save this VoxelGraph?
+        PS: The window will still close!");
         rootVisualElement.Remove(graphViewsHolder);
     }
 }
