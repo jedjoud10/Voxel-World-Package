@@ -8,6 +8,7 @@ using UnityEditor.Experimental.GraphView;
 using System.IO;
 using static VoxelGraphUtility;
 using static VoxelUtility;
+using static VoxelSavedGraphUtility;
 using System.Linq;
 /// <summary>
 /// Converts a VoxelGraphSO to a compute shader
@@ -16,6 +17,8 @@ public static class CodeConverter
 {
 
     public static Dictionary<string, object> variables = new Dictionary<string, object>();
+    public static Dictionary<string, SavedVoxelEdge> edges = new Dictionary<string, SavedVoxelEdge>();
+    public static StringBuilder localBuilder;
     /// <summary>
     /// Convert the VoxelGraphSO to a string that is going to be used as compute shader
     /// </summary>
@@ -89,20 +92,20 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
     
 }");
 
-        StringBuilder stringBuilderGraph = new StringBuilder();
+        localBuilder = new StringBuilder();
         for (int i = 0; i < 1; i++)
         {
             SavedLocalVoxelGraph graph = voxelGraphSO.globalVoxelGraph[i];
+            edges = graph.edges;
             //Start at the default node and traverse the graph
             string currentNodeGuid = graph.nodes.ElementAt(0).Key;
             SavedVoxelNode currentNode = graph.nodes.ElementAt(0).Value;
             VoxelNode voxelNode = voxelNodes[currentNode.type];            
             string currentLine = voxelNode.CodeRepresentationPort(graph, currentNode.savedPorts[0]);
-            Debug.Log(currentLine);
-            
+            Debug.Log(currentLine);            
         }
 
-        builder.Append(stringBuilderGraph.ToString());
+        builder.Append(localBuilder.ToString());
 
         //End
         builder.Append(@"
@@ -150,18 +153,30 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
             }
             voxelsBuffer[index] = voxel;
         }");
+        /*
         using (StreamWriter stream = File.CreateText(path))
         {
             stream.Write(builder.ToString());
         }
         AssetDatabase.Refresh();
+        */
     }
 
     /// <summary>
     /// Evaluate a specific input port
     /// </summary>
-    public static string EvaluatePort(SavedLocalVoxelGraph graph, string portguid, object defaultObj = null) 
+    public static string EvaluatePort(SavedLocalVoxelGraph graph, string portguid, object defaultObj) 
     {
+        Debug.Log(portguid);
+        return edges[portguid].output.portGuid;
+        if (defaultObj != null)
+        {
+            if (!variables.ContainsKey(portguid))
+            {
+                //variables.Add();
+                //localBuilder.Insert(0, );
+            }
+        }
         return null;
         object obj = defaultObj;
     }

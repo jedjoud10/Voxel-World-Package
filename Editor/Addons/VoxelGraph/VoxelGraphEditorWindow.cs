@@ -16,7 +16,6 @@ public class VoxelGraphEditorWindow : EditorWindow
     private VisualElement graphViewsHolder;
     private VoxelGraphSO voxelGraphSOData;
     private VoxelGraphType currentVoxelGraphType;
-
     /// <summary>
     /// Actually creates the graph window
     /// </summary>
@@ -28,6 +27,8 @@ public class VoxelGraphEditorWindow : EditorWindow
         window.GenerateWindow();
         window.SwitchGraphView("First Graph", VoxelGraphType.Density);
     }
+
+
 
     /// <summary>
     /// Generates the graphview
@@ -72,8 +73,9 @@ public class VoxelGraphEditorWindow : EditorWindow
         var saveButton = new Button(() => voxelGraphSOData.Save(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
         var generateShaderButton = new Button(() => 
         {
-            ///string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
-            CodeConverter.ConvertAndSave(voxelGraphSOData, "Asset/DefaultComputeShader.compute");
+            //string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
+            voxelGraphSOData.Save(currentGraphView, currentVoxelGraphType);
+            CodeConverter.ConvertAndSave(voxelGraphSOData, "Assets/DefaultComputeShader.compute");
         }) { text = "Generate Shader" };
 
         var switchToDensityGraph = new Button(() => SwitchGraphView("Density Graph", VoxelGraphType.Density)) { text = "Switch to Density Graph" };

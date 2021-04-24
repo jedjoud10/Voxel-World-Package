@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using static VoxelUtility;
 using static VoxelGraphUtility;
+using static VoxelSavedGraphUtility;
 using System;
 using System.Linq;
 using UnityEngine.UIElements;
@@ -564,7 +565,7 @@ public static class VoxelGraphUtility
         /// </summary>
         public override string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid)
         {
-            return $"float3 {nodeGuid} = float3({CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(0).Key, ((Vector3)objValue).x)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(1).Key, ((Vector3)objValue).y)}, {CodeConverter.EvaluatePort(savedVoxelGraph, ports.ElementAt(2).Key, ((Vector3)objValue).z)});";
+            return $"float3 {nodeGuid} = float3({((Vector3)objValue).x}, {((Vector3)objValue).y}, {((Vector3)objValue).z});";
         }
     }
 

@@ -7,6 +7,7 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static VoxelGraphUtility;
+using static VoxelSavedGraphUtility;
 /// <summary>
 /// The graph view that handles the nodes
 /// </summary>
@@ -55,8 +56,8 @@ public class VoxelGraphView : GraphView
         //Create the edges
         foreach (var savedVoxelEdge in savedVoxelGraph.edges)
         {
-            Port input = portData[savedVoxelEdge.Value.input.portguid];
-            Port output = portData[savedVoxelEdge.Value.output.portguid];
+            Port input = portData[savedVoxelEdge.Value.input.portGuid];
+            Port output = portData[savedVoxelEdge.Value.output.portGuid];
             Edge newEdge = new Edge() { input = input, output = output };
             input.Connect(newEdge);
             output.Connect(newEdge);
@@ -100,16 +101,16 @@ public class VoxelGraphView : GraphView
             {
                 input = new SavedVoxelPort()
                 {
-                    portguid = ((GraphViewPortData)(edge.input.userData)).portGuid,
+                    portGuid = ((GraphViewPortData)(edge.input.userData)).portGuid,
                     nodeGuid = ((GraphViewNodeData)edge.input.node.userData).guid
                 },
                 output = new SavedVoxelPort()
                 {
-                    portguid = ((GraphViewPortData)(edge.output.userData)).portGuid,
+                    portGuid = ((GraphViewPortData)(edge.output.userData)).portGuid,
                     nodeGuid = ((GraphViewNodeData)edge.output.node.userData).guid
                 },
             };
-            savedVoxelGraph.edges.Add(savedEdge.input.nodeGuid, savedEdge);
+            savedVoxelGraph.edges.Add(savedEdge.input.portGuid, savedEdge);
         }
         savedVoxelGraph.SaveDictionaries();
     }
