@@ -99,10 +99,9 @@ public static class VoxelSavedGraphUtility
             var defaultNode = new SavedVoxelNode()
             {
                 pos = Vector2.zero,
-                type = 5,
-                value = null
+                nodeData = new GraphViewNodeData { voxelNode = (VoxelNode)Activator.CreateInstance(voxelNodesTypes[5]), guid = GUID.Generate().ToString() },
             };
-            densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default CSM graph if it wasn't generated yet
@@ -110,10 +109,9 @@ public static class VoxelSavedGraphUtility
             defaultNode = new SavedVoxelNode()
             {
                 pos = Vector2.zero,
-                type = 6,
-                value = null
+                nodeData = new GraphViewNodeData { voxelNode = (VoxelNode)Activator.CreateInstance(voxelNodesTypes[6]), guid = GUID.Generate().ToString() },
             };
-            csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default VoxelDetails graph if it wasn't generated yet        
@@ -121,10 +119,9 @@ public static class VoxelSavedGraphUtility
             defaultNode = new SavedVoxelNode()
             {
                 pos = Vector2.zero,
-                type = 7,
-                value = null
+                nodeData = new GraphViewNodeData { voxelNode = (VoxelNode)Activator.CreateInstance(voxelNodesTypes[7]), guid = GUID.Generate().ToString() },
             };
-            voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             defaultSet = true;
@@ -183,8 +180,8 @@ public static class VoxelSavedGraphUtility
                 return false;
 
             bool position = x.Value.pos == y.Value.pos;
-            bool type = x.Value.type == y.Value.type;
-            bool savedPorts = x.Value.savedPorts.SequenceEqual(y.Value.savedPorts);
+            bool type = x.Value.nodeData.GetType() == y.Value.nodeData.GetType();
+            bool savedPorts = x.Value.nodeData.voxelNode.savedPorts.SequenceEqual(y.Value.nodeData.voxelNode.savedPorts);
             bool key = x.Key == y.Key;
 
             return (key && position && type && savedPorts);
@@ -205,11 +202,7 @@ public static class VoxelSavedGraphUtility
     {
         //Main variables
         public Vector2 pos;
-        public int type;
-        public List<string> savedPorts;
-
-        //Optional value for constant numbers
-        public object value;
+        public GraphViewNodeData nodeData;
     }
 
     /// <summary>
@@ -229,8 +222,7 @@ public static class VoxelSavedGraphUtility
     [System.Serializable]
     public class SavedVoxelPort
     {
-        //Main variables
+        public GraphViewPortData portData;
         public string nodeGuid;
-        public string portGuid;
     }
 }

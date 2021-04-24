@@ -13,29 +13,12 @@ MonoBehaviour:
   m_Name: NewVoxelGraph
   m_EditorClassIdentifier: 
   globalVoxelGraph:
-    defaultSet: 1
+    defaultSet: 0
     densityGraph:
-      node_keys:
-      - 76ec4a46d01e81e47b1525365f1ee733
-      - 9b606fb1-a0a2-46f1-a82e-9916d84651e7
-      edges_keys:
-      - 87cf7772-f6b0-4f14-b903-6708f6e0c023
-      node_values:
-      - pos: {x: 0, y: 0}
-        type: 5
-        savedPorts:
-        - 87cf7772-f6b0-4f14-b903-6708f6e0c023
-      - pos: {x: -74, y: 155}
-        type: 8
-        savedPorts:
-        - b82d0fe2-ba13-449e-be86-d91cd7d1af58
-      edges_values:
-      - input:
-          nodeGuid: 76ec4a46d01e81e47b1525365f1ee733
-          portGuid: 87cf7772-f6b0-4f14-b903-6708f6e0c023
-        output:
-          nodeGuid: 9b606fb1-a0a2-46f1-a82e-9916d84651e7
-          portGuid: b82d0fe2-ba13-449e-be86-d91cd7d1af58
+      node_keys: []
+      edges_keys: []
+      node_values: []
+      edges_values: []
     csmGraph:
       node_keys: []
       edges_keys: []

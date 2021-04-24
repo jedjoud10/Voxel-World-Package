@@ -17,7 +17,8 @@ public static class CodeConverter
 {
 
     public static Dictionary<string, object> variables = new Dictionary<string, object>();
-    public static Dictionary<string, SavedVoxelEdge> edges = new Dictionary<string, SavedVoxelEdge>();
+    public static Dictionary<string, SavedVoxelEdge> savedEdges = new Dictionary<string, SavedVoxelEdge>();
+    public static Dictionary<string, SavedVoxelNode> savedNodes = new Dictionary<string, SavedVoxelNode>();
     public static StringBuilder localBuilder;
     /// <summary>
     /// Convert the VoxelGraphSO to a string that is going to be used as compute shader
@@ -96,12 +97,13 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
         for (int i = 0; i < 1; i++)
         {
             SavedLocalVoxelGraph graph = voxelGraphSO.globalVoxelGraph[i];
-            edges = graph.edges;
+            savedEdges = graph.edges;
+            savedNodes = graph.nodes;    
             //Start at the default node and traverse the graph
             string currentNodeGuid = graph.nodes.ElementAt(0).Key;
             SavedVoxelNode currentNode = graph.nodes.ElementAt(0).Value;
-            VoxelNode voxelNode = voxelNodes[currentNode.type];            
-            string currentLine = voxelNode.CodeRepresentationPort(graph, currentNode.savedPorts[0]);
+            VoxelNode voxelNode = currentNode.nodeData.voxelNode;            
+            string currentLine = voxelNode.CodeRepresentationPort(graph, currentNode.nodeData.voxelNode.savedPorts[0]);
             Debug.Log(currentLine);            
         }
 
@@ -167,17 +169,18 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
     /// </summary>
     public static string EvaluatePort(SavedLocalVoxelGraph graph, string portguid, object defaultObj) 
     {
-        Debug.Log(portguid);
-        return edges[portguid].output.portGuid;
-        if (defaultObj != null)
+        //Check if this is a const port and if it already have a valid code representation
+        if (!savedEdges.ContainsKey(portguid))
         {
-            if (!variables.ContainsKey(portguid))
-            {
-                //variables.Add();
-                //localBuilder.Insert(0, );
-            }
+            //This port is a const
+            return defaultObj.ToString();
         }
-        return null;
-        object obj = defaultObj;
+        else
+        {
+            //Gotta go back the "tree"
+            VoxelNode node = savedNodes[savedEdges[portguid].output.nodeGuid].nodeData.voxelNode;
+            return node.CodeRepresentationPort(graph, savedEdges[portguid].output.portData.portGuid);
+        }
+        return "";
     }
 }
