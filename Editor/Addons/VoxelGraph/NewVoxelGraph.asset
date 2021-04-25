@@ -16,30 +16,54 @@ MonoBehaviour:
     defaultSet: 1
     densityGraph:
       node_keys:
-      - 76ec4a46d01e81e47b1525365f1ee733
-      - 9b606fb1-a0a2-46f1-a82e-9916d84651e7
+      - 66c8c2792eec5864aa3c0b867c6113bb
+      - 26c1ef80-a198-42cb-92d3-b81213ed5035
+      - eb65f3bf-d476-486e-91a6-2feeaa0c51d0
       edges_keys:
-      - 87cf7772-f6b0-4f14-b903-6708f6e0c023
+      - 34cea256-931e-49da-be5a-5d8c1e67f6d7
+      - f8c2885e-d05c-4e8e-9ae7-d2a3bb8f9b1e
       node_values:
       - pos: {x: 0, y: 0}
         type: 5
+        guid: 66c8c2792eec5864aa3c0b867c6113bb
         savedPorts:
-        - 87cf7772-f6b0-4f14-b903-6708f6e0c023
-      - pos: {x: -74, y: 155}
+        - f8c2885e-d05c-4e8e-9ae7-d2a3bb8f9b1e
+      - pos: {x: -399, y: 56}
         type: 8
+        guid: 26c1ef80-a198-42cb-92d3-b81213ed5035
         savedPorts:
-        - b82d0fe2-ba13-449e-be86-d91cd7d1af58
+        - 2ca3c788-e7dd-41b8-abba-07b57d3ee862
+      - pos: {x: -216, y: 104}
+        type: 21
+        guid: eb65f3bf-d476-486e-91a6-2feeaa0c51d0
+        savedPorts:
+        - 34cea256-931e-49da-be5a-5d8c1e67f6d7
+        - e55927dc-0a5b-4c42-b40c-f114345a2ccc
+        - 463f7e04-9417-4994-96f9-d78ce93873c5
       edges_values:
       - input:
-          nodeGuid: 76ec4a46d01e81e47b1525365f1ee733
-          portGuid: 87cf7772-f6b0-4f14-b903-6708f6e0c023
+          nodeGuid: eb65f3bf-d476-486e-91a6-2feeaa0c51d0
+          portGuid: 34cea256-931e-49da-be5a-5d8c1e67f6d7
         output:
-          nodeGuid: 9b606fb1-a0a2-46f1-a82e-9916d84651e7
-          portGuid: b82d0fe2-ba13-449e-be86-d91cd7d1af58
+          nodeGuid: 26c1ef80-a198-42cb-92d3-b81213ed5035
+          portGuid: 2ca3c788-e7dd-41b8-abba-07b57d3ee862
+      - input:
+          nodeGuid: 66c8c2792eec5864aa3c0b867c6113bb
+          portGuid: f8c2885e-d05c-4e8e-9ae7-d2a3bb8f9b1e
+        output:
+          nodeGuid: eb65f3bf-d476-486e-91a6-2feeaa0c51d0
+          portGuid: 463f7e04-9417-4994-96f9-d78ce93873c5
     csmGraph:
-      node_keys: []
+      node_keys:
+      - e224bc6a17c64794c86044b3f1b114d6
       edges_keys: []
-      node_values: []
+      node_values:
+      - pos: {x: 0, y: 0}
+        type: 6
+        guid: e224bc6a17c64794c86044b3f1b114d6
+        savedPorts:
+        - 11d85517-f400-49e4-b1e3-d9604e4c34d2
+        - 6e78afd5-764b-4fa1-a4ba-53aa77a18082
       edges_values: []
     voxelDetailsGraph:
       node_keys: []

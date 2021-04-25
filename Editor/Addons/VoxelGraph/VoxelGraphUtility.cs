@@ -92,7 +92,6 @@ public static class VoxelGraphUtility
         /// </summary>
         public virtual string CodeRepresentationPort(SavedLocalVoxelGraph savedVoxelGraph, string portguid) 
         {
-            Debug.Log(portguid);
             throw new NotImplementedException();
         }
     }
@@ -108,19 +107,33 @@ public static class VoxelGraphUtility
         public VoxelAABBBound GetAABB();
     }
 
-    public static List<VoxelNode> voxelNodes = GetAllVoxelNodeTypes();
+    public static List<Type> voxelNodesTypes = GetAllVoxelNodeTypes();
+    public static List<VoxelNode> voxelNodes = GetAllVoxelNodeTypes().Select(type => (VoxelNode)Activator.CreateInstance(type)).ToList();
 
     /// <summary>
     /// Gets all of the VoxelGenerationObject classes
     /// </summary>
     /// <returns></returns>
-    private static List<VoxelNode> GetAllVoxelNodeTypes()
+    private static List<Type> GetAllVoxelNodeTypes()
     {
         return AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.IsSubclassOf(typeof(VoxelNode)) && !type.IsAbstract)
-            .Select(type => Activator.CreateInstance(type) as VoxelNode)
             .ToList();
+    }
+
+    public static VoxelNode CreateVoxelNode(int type, object value)
+    {
+        VoxelNode node = (VoxelNode)Activator.CreateInstance(voxelNodesTypes[type]);
+        if (node is VNConstants) ((VNConstants)node).objValue = value;
+        return node;
+    }
+
+    public static VoxelNode CreateVoxelNode(Type type, object value)
+    {
+        VoxelNode node = (VoxelNode)Activator.CreateInstance(type);
+        if (node is VNConstants) ((VNConstants)node).objValue = value;
+        return node;
     }
 
     /// <summary>

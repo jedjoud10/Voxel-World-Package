@@ -10,6 +10,52 @@ using UnityEditor;
 public static class VoxelSavedGraphUtility 
 {
     /// <summary>
+    /// Serializes and deserializes a binary file containing the savedglobalvoxelgraph
+    /// </summary>
+    public class VoxelGraphSerializer 
+    {
+        public string path;
+        public SavedGlobalVoxelGraph globalGraph;
+        /// <summary>
+        /// Save a specific local graph
+        /// </summary>
+        public void SaveLocalGraph(VoxelGraphView localGraphView, VoxelGraphType type) 
+        { 
+            localGraphView.SaveLocalVoxelGraph(globalGraph[type]);
+            SaveGlobalGraph();
+            AssetDatabase.Refresh();
+        }
+        
+        /// <summary>
+        /// Ask the user if they want to save a specific voxel graph
+        /// </summary>
+        public void SaveLocalGraphAskUser(VoxelGraphView localGraphView, VoxelGraphType type, string message) 
+        {
+            if (globalGraph != null && localGraphView != null)
+            { 
+                localGraphView.SaveLocalVoxelGraph(globalGraph[type], message);
+                SaveGlobalGraph();
+            }
+        }
+        
+        /// <summary>
+        /// Save the whole graph
+        /// </summary>
+        public void SaveGlobalGraph() { BinaryLoaderSaver.Save(path, globalGraph); }
+        
+        /// <summary>
+        /// Load the whole graph
+        /// </summary>
+        public void LoadGlobalGraph(string globalPath = null) { globalGraph = BinaryLoaderSaver.Load(globalPath ?? path) as SavedGlobalVoxelGraph; }
+        
+        /// <summary>
+        /// Load the default voxel graph that came in with the plugin
+        /// </summary>
+        public void LoadDefaultVoxelGraph() { LoadGlobalGraph(Application.dataPath.Substring(0, Application.dataPath.Length - 7) + "/Packages/Voxel-World-Package/Editor/Addons/VoxelGraph/DefaultVoxelGraph.voxelgraph"); }
+    }
+
+
+    /// <summary>
     /// A whole voxel graph that's going to get wrapped
     /// </summary>
     [System.Serializable]
@@ -98,36 +144,39 @@ public static class VoxelSavedGraphUtility
             densityGraph = new SavedLocalVoxelGraph();
             var defaultNode = new SavedVoxelNode()
             {
-                pos = Vector2.zero,
+                posx = 0, posy = 0,
                 type = 5,
-                value = null
+                value = null,
+                guid = GUID.Generate().ToString()
             };
-            densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.guid, defaultNode } };
             densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default CSM graph if it wasn't generated yet
             csmGraph = new SavedLocalVoxelGraph();
             defaultNode = new SavedVoxelNode()
             {
-                pos = Vector2.zero,
+                posx = 0, posy = 0,
                 type = 6,
-                value = null
+                value = null,
+                guid = GUID.Generate().ToString()
             };
-            csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.guid, defaultNode } };
             csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default VoxelDetails graph if it wasn't generated yet        
             voxelDetailsGraph = new SavedLocalVoxelGraph();
             defaultNode = new SavedVoxelNode()
             {
-                pos = Vector2.zero,
+                posx = 0, posy = 0,
                 type = 7,
-                value = null
+                value = null,
+                guid = GUID.Generate().ToString()
             };
-            voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { GUID.Generate().ToString(), defaultNode } };
+            voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.guid, defaultNode } };
             voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
-
             defaultSet = true;
+            BinaryLoaderSaver.Save(Application.dataPath.Substring(0, Application.dataPath.Length - 7) + "/Packages/Voxel-World-Package/Editor/Addons/VoxelGraph/DefaultVoxelGraph.voxelgraph", this);
         }
     }
 
@@ -140,36 +189,6 @@ public static class VoxelSavedGraphUtility
         //Main variables
         public Dictionary<string, SavedVoxelNode> nodes;//Uses Node GUID
         public Dictionary<string, SavedVoxelEdge> edges;//Uses input port GUID
-
-        //Godamnit Unity why aren't dictionaries serializable
-        public List<string> node_keys, edges_keys;
-        public List<SavedVoxelNode> node_values;
-        public List<SavedVoxelEdge> edges_values;
-
-        /// <summary>
-        /// Turn the dictionaries into the lists
-        /// </summary>
-        public void SaveDictionaries()
-        {
-            node_keys = nodes.Keys.ToList();
-            node_values = nodes.Values.ToList();
-
-            edges_keys = edges.Keys.ToList();
-            edges_values = edges.Values.ToList();
-        }
-
-        /// <summary>
-        /// Turn the lists into dictionaries
-        /// </summary>
-        public void LoadDictionaries()
-        {
-            //https://stackoverflow.com/questions/4038978/map-two-lists-into-a-dictionary-in-c-sharp
-            if (node_keys == null) { node_keys = new List<string>(); node_values = new List<SavedVoxelNode>(); }
-            if (edges_keys == null) { edges_keys = new List<string>(); edges_values = new List<SavedVoxelEdge>(); };
-
-            nodes ??= node_keys.Select((k, i) => new { k, v = node_values[i] }).ToDictionary(x => x.k, x => x.v);
-            edges ??= edges_keys.Select((k, i) => new { k, v = edges_values[i] }).ToDictionary(x => x.k, x => x.v);
-        }
     }
 
     /// <summary>
@@ -182,7 +201,7 @@ public static class VoxelSavedGraphUtility
             if (x.Value == null || y.Key == null)
                 return false;
 
-            bool position = x.Value.pos == y.Value.pos;
+            bool position = x.Value.posx == y.Value.posx && x.Value.posy == y.Value.posy;
             bool type = x.Value.type == y.Value.type;
             bool savedPorts = x.Value.savedPorts.SequenceEqual(y.Value.savedPorts);
             bool key = x.Key == y.Key;
@@ -204,12 +223,18 @@ public static class VoxelSavedGraphUtility
     public class SavedVoxelNode
     {
         //Main variables
-        public Vector2 pos;
+        public float posx, posy;
         public int type;
+        public string guid;
+        public object value;
         public List<string> savedPorts;
 
         //Optional value for constant numbers
-        public object value;
+
+        public static GraphViewNodeData ConvertToGraphViewNodeData(SavedVoxelNode savedVoxelNode) 
+        {
+            return new GraphViewNodeData() { guid = savedVoxelNode.guid, voxelNode = CreateVoxelNode(savedVoxelNode.type, savedVoxelNode.value), voxelNodeType = savedVoxelNode.type };
+        }
     }
 
     /// <summary>
