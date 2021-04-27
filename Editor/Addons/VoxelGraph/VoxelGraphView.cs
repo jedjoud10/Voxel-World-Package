@@ -48,10 +48,8 @@ public class VoxelGraphView : GraphView
         {
             Node newNode = CreateNode(
                 new Vector2(savedVoxelNode.Value.posx, savedVoxelNode.Value.posy),
-                voxelsNodeTypes[savedVoxelNode.Value.type], 
-                guid: savedVoxelNode.Key, 
-                objValue: savedVoxelNode.Value.value, 
-                savedPorts: savedVoxelNode.Value.savedPorts);
+                type: savedVoxelNode.Value.nodeData.voxelNode.GetType(),
+                graphViewNodeData: savedVoxelNode.Value.nodeData);
             dictionaryNodes.Add(savedVoxelNode.Key, newNode);
             VoxelNode voxelNode = ((GraphViewNodeData)newNode.userData).voxelNode;
             foreach (var port in voxelNode.ports) portData.Add(((GraphViewPortData)port.Value.userData).portGuid, port.Value);
@@ -70,35 +68,24 @@ public class VoxelGraphView : GraphView
     }
 
     /// <summary>
-    /// Save a specific voxel graph
+    /// Save this specific graph view
     /// </summary>
-    public void SaveLocalVoxelGraph(SavedLocalVoxelGraph reference)
+    public SavedLocalVoxelGraph SaveLocalVoxelGraph()
     {        
-        SavedLocalVoxelGraph savedVoxelGraph = reference;
-        savedVoxelGraph.nodes = new Dictionary<string, SavedVoxelNode>();
-        savedVoxelGraph.edges = new Dictionary<string, SavedVoxelEdge>();
+        SavedLocalVoxelGraph savedVoxelGraph = new SavedLocalVoxelGraph();
         //Nodes
         foreach (var node in nodes)
         {
-            var nodeData = ((GraphViewNodeData)node.userData);
+            var graphViewNodeData = ((GraphViewNodeData)node.userData);
             SavedVoxelNode savedNode = new SavedVoxelNode()
             {
                 posx = node.GetPosition().position.x,
                 posy = node.GetPosition().position.y,
-                type = nodeData.voxelNodeType,
-                guid = nodeData.guid,
-                savedPorts = new List<string>(),
+                guid = graphViewNodeData.guid,
+                nodeData = graphViewNodeData
             };
 
-            //Save ports
-            foreach (var port in nodeData.voxelNode.savedPorts) savedNode.savedPorts.Add(port);
-
-            //Save constant value
-            if (((GraphViewNodeData)node.userData).voxelNode is VNConstants)
-            {
-                savedNode.value = ((VNConstants)((GraphViewNodeData)node.userData).voxelNode).objValue;
-            }
-            savedVoxelGraph.nodes.Add(nodeData.guid, savedNode);
+            savedVoxelGraph.nodes.Add(graphViewNodeData.guid, savedNode);
         }
         //Edges
         foreach (var edge in edges)
@@ -118,37 +105,39 @@ public class VoxelGraphView : GraphView
             };
             savedVoxelGraph.edges.Add(savedEdge.input.portGuid, savedEdge);
         }
+
+        return savedVoxelGraph;
     }
 
     /// <summary>
     /// Save a specific voxel graph after asking the user
     /// </summary>
-    public void SaveLocalVoxelGraph(SavedLocalVoxelGraph reference, string message)
+    public SavedLocalVoxelGraph SaveLocalVoxelGraph(SavedLocalVoxelGraph currentSLVG, string message, out bool save)
     {
-        SavedLocalVoxelGraph newReference = new SavedLocalVoxelGraph();
-        SaveLocalVoxelGraph(newReference);
+        SavedLocalVoxelGraph newSLVG = new SavedLocalVoxelGraph();
+        newSLVG = SaveLocalVoxelGraph();
 
         //Check if we have a different count, if so then it means it's different
-        bool differentCount = (newReference.nodes.Count != reference.nodes.Count || newReference.edges.Count != reference.edges.Count);
+        bool differentCount = (newSLVG.nodes.Count != currentSLVG.nodes.Count || newSLVG.edges.Count != currentSLVG.edges.Count);
         bool differentElements = false;
 
         SavedVoxelNodeComparer comparer = new SavedVoxelNodeComparer();
-        differentElements = !newReference.nodes.SequenceEqual(reference.nodes, comparer);
+        differentElements = !newSLVG.nodes.SequenceEqual(currentSLVG.nodes, comparer);
         bool different = differentCount || differentElements;
+
+        save = false;
 
         if (different)
         {
-            if (EditorUtility.DisplayDialog("Want to save?", message, "Yes", "No")) 
-            {
-                reference.edges = newReference.edges;
-                reference.nodes = newReference.nodes;
-            }
+            save = EditorUtility.DisplayDialog("Want to save?", message, "Yes", "No");
+            return newSLVG;
         }
         else
         {
-            reference.edges = newReference.edges;
-            reference.nodes = newReference.nodes;
+            return newSLVG;
         }
+
+        return null;
     }
 
     /// <summary>
@@ -194,30 +183,34 @@ public class VoxelGraphView : GraphView
     /// <summary>
     /// Generate a single node with a specified voxel node type
     /// <summary>
-    private Node CreateNode(Vector2 pos, Type type, string guid = null, object objValue = null, List<string> savedPorts = null) 
+    private Node CreateNode(Vector2 pos, Type type = null, GraphViewNodeData graphViewNodeData = null) 
     {
-        VoxelNode voxelNode = CreateVoxelNode(type, objValue);
-        //Main data
-        GraphViewNodeData data = new GraphViewNodeData()
+        GraphViewNodeData data;
+        if (graphViewNodeData == null) 
         {
-            guid = guid == null ? Guid.NewGuid().ToString() : guid,
-            voxelNode = voxelNode,
-            voxelNodeType = voxelsNodeTypes.FindIndex((x) => x == type)
+            VoxelNode voxelNode = (VoxelNode)Activator.CreateInstance(type);
+            //Main data
+            data = new GraphViewNodeData()
+            {
+                guid = Guid.NewGuid().ToString(),
+                voxelNode = voxelNode,
+            };
+            voxelNode.Setup(data.guid);
+        }
+        else data = graphViewNodeData;
+
+        Node node = new Node()
+        {            
+            userData = data
         };
 
-        voxelNode.Setup(data.guid, savedPorts);
-        var node = new Node
-        {
-            userData = data,
-        };      
-
         //Generate the output ports
-        var customData = data.voxelNode.GetCustomNodeData(node);
+        var customData = data.voxelNode.GetCustomNodeData(data.voxelNode);
         Type nodeType = data.voxelNode.GetType();
         if (nodeType == typeof(VNResult) || nodeType == typeof(VNCSMResult) || nodeType == typeof(VNVoxelDetailsResult)) node.capabilities &= ~Capabilities.Deletable;
-        node.title = customData.Item1;
-        foreach (var item in customData.Item2) node.inputContainer.Add(item);
-        foreach (var item in customData.Item3) node.outputContainer.Add(item);
+        data.voxelNode.title = customData.Item1;
+        foreach (var item in customData.Item2) data.voxelNode.inputContainer.Add(item);
+        foreach (var item in customData.Item3) data.voxelNode.outputContainer.Add(item);
 
         node.RefreshExpandedState();
         node.RefreshPorts();

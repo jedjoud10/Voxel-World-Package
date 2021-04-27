@@ -102,7 +102,8 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
             //Start at the default node and traverse the graph
             string currentNodeGuid = graph.nodes.ElementAt(0).Key;
             SavedVoxelNode currentSavedNode = graph.nodes.ElementAt(0).Value;
-            VoxelNode voxelNode = CreateVoxelNode(currentSavedNode.type, currentSavedNode.value);            
+            VoxelNode voxelNode = CreateVoxelNode(currentSavedNode.type, currentSavedNode.value);
+            voxelNode.savedPorts = currentSavedNode.savedPorts;
             string currentLine = voxelNode.CodeRepresentationPort(graph, voxelNode.savedPorts[0]);
             Debug.Log(currentLine);            
         }

@@ -9,17 +9,18 @@ using UnityEngine.UIElements;
 /// <summary>
 /// Voxel node data
 /// </summary>
+[System.Serializable]
 public class GraphViewNodeData
 {
     //Main variables
     public string guid;
-    public int voxelNodeType;
     public VoxelNode voxelNode;
 }
 
 /// <summary>
 /// Voxel port data
 /// </summary>
+[System.Serializable]
 public class GraphViewPortData
 {
     //Main variables
