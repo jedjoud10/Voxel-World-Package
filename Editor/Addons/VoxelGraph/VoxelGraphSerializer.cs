@@ -39,7 +39,7 @@ public static partial class VoxelSavedGraphUtility
             {
                 bool save = false;
                 globalGraph[type] = localGraphView.SaveLocalVoxelGraph(globalGraph[type], message, out save);
-                if (save || path == defaultPath)
+                if (save)
                 {
                     SaveGlobalGraph();
                     AssetDatabase.Refresh();
@@ -55,7 +55,7 @@ public static partial class VoxelSavedGraphUtility
         public void SaveGlobalGraph()
         {
             if (string.IsNullOrEmpty(path) || defaultPath == path) path = EditorUtility.SaveFilePanel("Save VoxelGraph:", "Assets/", "NewVoxelGraph", "voxelgraph");
-            if (!string.IsNullOrEmpty(path)) BinaryLoaderSaver.Save(path, globalGraph);
+            if (!string.IsNullOrEmpty(path) && defaultPath != path) BinaryLoaderSaver.Save(path, globalGraph);
         }
 
         /// <summary>
@@ -68,7 +68,7 @@ public static partial class VoxelSavedGraphUtility
         }
 
         /// <summary>
-        /// Load the default voxel graph that came in with the plugin
+        /// Load the default voxel graph that came in with the voxelgraph addon
         /// </summary>
         public void LoadDefaultVoxelGraph() { LoadGlobalGraph(defaultPath); }
     }

@@ -15,7 +15,6 @@ public class VoxelGraphView : GraphView
 {
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
-    private readonly List<Type> voxelsNodeTypes = voxelNodesTypes;
     public VoxelGraphType voxelGraphType;
 
     /// <summary>
@@ -81,7 +80,6 @@ public class VoxelGraphView : GraphView
             {
                 posx = node.GetPosition().position.x,
                 posy = node.GetPosition().position.y,
-                guid = graphViewNodeData.guid,
                 nodeData = graphViewNodeData
             };
 
@@ -129,14 +127,14 @@ public class VoxelGraphView : GraphView
 
         if (different)
         {
-            save = EditorUtility.DisplayDialog("Want to save?", message, "Yes", "No");
+            save = EditorUtility.DisplayDialog("Want to save?", message, "Save", "Don't Save");
             return newSLVG;
         }
         else
         {
+            save = false;
             return newSLVG;
         }
-
         return null;
     }
 
@@ -148,10 +146,9 @@ public class VoxelGraphView : GraphView
         //Custom context menu items
         if (evt.target is GraphView)
         {
-            for (int i = 0; i < voxelsNodeTypes.Count; i++)
+            for (int i = 0; i < templateVoxelNodes.Count; i++)
             {
-                Type voxelNodeType = voxelNodesTypes[i];
-                VoxelNode templateVoxelNode = voxelNodes[i];
+                Type voxelNodeType = templateVoxelNodes[i].GetType();
                 if (voxelNodeType == typeof(VNResult) || voxelNodeType == typeof(VNCSMResult) || voxelNodeType == typeof(VNVoxelDetailsResult)) continue;
                 DropdownMenuAction.Status status = DropdownMenuAction.Status.Normal;
 
@@ -169,7 +166,7 @@ public class VoxelGraphView : GraphView
                         break;
                 }
 
-                evt.menu.AppendAction("Create Node/" + templateVoxelNode.name, (e) =>
+                evt.menu.AppendAction("Create Node/" + templateVoxelNodes[i].name, (e) =>
                 {
                     CreateNode(e.eventInfo.localMousePosition - new Vector2(this.viewTransform.position.x, this.viewTransform.position.y), voxelNodeType);
                 }, status);
@@ -186,31 +183,35 @@ public class VoxelGraphView : GraphView
     private Node CreateNode(Vector2 pos, Type type = null, GraphViewNodeData graphViewNodeData = null) 
     {
         GraphViewNodeData data;
-        if (graphViewNodeData == null) 
+        if (graphViewNodeData == null)
         {
             VoxelNode voxelNode = (VoxelNode)Activator.CreateInstance(type);
             //Main data
+            string guid = Guid.NewGuid().ToString();
             data = new GraphViewNodeData()
             {
-                guid = Guid.NewGuid().ToString(),
+                guid = guid,
                 voxelNode = voxelNode,
             };
-            voxelNode.Setup(data.guid);
+            voxelNode.Setup(data.guid, false);
         }
-        else data = graphViewNodeData;
-
+        else 
+        {
+            graphViewNodeData.voxelNode.Setup(graphViewNodeData.guid, true);
+            data = graphViewNodeData; 
+        }
         Node node = new Node()
         {            
             userData = data
         };
 
         //Generate the output ports
-        var customData = data.voxelNode.GetCustomNodeData(data.voxelNode);
+        var customData = data.voxelNode.GetCustomNodeData(node);
         Type nodeType = data.voxelNode.GetType();
         if (nodeType == typeof(VNResult) || nodeType == typeof(VNCSMResult) || nodeType == typeof(VNVoxelDetailsResult)) node.capabilities &= ~Capabilities.Deletable;
-        data.voxelNode.title = customData.Item1;
-        foreach (var item in customData.Item2) data.voxelNode.inputContainer.Add(item);
-        foreach (var item in customData.Item3) data.voxelNode.outputContainer.Add(item);
+        node.title = customData.Item1;
+        foreach (var item in customData.Item2) node.inputContainer.Add(item);
+        foreach (var item in customData.Item3) node.outputContainer.Add(item);
 
         node.RefreshExpandedState();
         node.RefreshPorts();

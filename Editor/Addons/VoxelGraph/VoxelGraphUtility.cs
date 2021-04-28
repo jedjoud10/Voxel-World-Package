@@ -25,18 +25,18 @@ public static partial class VoxelGraphUtility
         public VoxelAABBBound GetAABB();
     }
 
-    public static List<Type> voxelNodesTypes = GetAllVoxelNodeTypes();
-    public static List<VoxelNode> voxelNodes = GetAllVoxelNodeTypes().Select(type => (VoxelNode)Activator.CreateInstance(type)).ToList();
+    public static List<VoxelNode> templateVoxelNodes = GetAllVoxelNodes();
 
     /// <summary>
     /// Gets all of the VoxelGenerationObject classes
     /// </summary>
     /// <returns></returns>
-    private static List<Type> GetAllVoxelNodeTypes()
+    private static List<VoxelNode> GetAllVoxelNodes()
     {
         return AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.IsSubclassOf(typeof(VoxelNode)) && !type.IsAbstract)
+            .Select(type => (VoxelNode)Activator.CreateInstance(type))
             .ToList();
     }
 }

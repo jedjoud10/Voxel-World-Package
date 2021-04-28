@@ -16,14 +16,14 @@ public static partial class VoxelSavedGraphUtility
     {
         public bool Equals(KeyValuePair<string, SavedVoxelNode> x, KeyValuePair<string, SavedVoxelNode> y)
         {
-            if (x.Value == null || y.Key == null || x.Value.savedPorts == null || y.Value.savedPorts == null) return false;
+            if (x.Value == null || y.Key == null || x.Value.nodeData.voxelNode.savedPorts == null || y.Value.nodeData.voxelNode.savedPorts == null) return false;
 
             bool position = x.Value.posx == y.Value.posx && x.Value.posy == y.Value.posy;
-            bool type = x.Value.type == y.Value.type;
-            bool savedPorts = x.Value.savedPorts.SequenceEqual(y.Value.savedPorts);
+            bool type = x.Value.nodeData == y.Value.nodeData;
+            bool savedPorts = x.Value.nodeData.voxelNode.savedPorts.SequenceEqual(y.Value.nodeData.voxelNode.savedPorts);
             bool key = x.Key == y.Key;
 
-            return (key && position && type && savedPorts);
+            return (key && position && savedPorts && type);
             throw new System.NotImplementedException();
         }
 
@@ -41,7 +41,6 @@ public static partial class VoxelSavedGraphUtility
     {
         //Main variables
         public float posx, posy;
-        public string guid;
         public GraphViewNodeData nodeData;
     }
 

@@ -102,9 +102,8 @@ void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
             //Start at the default node and traverse the graph
             string currentNodeGuid = graph.nodes.ElementAt(0).Key;
             SavedVoxelNode currentSavedNode = graph.nodes.ElementAt(0).Value;
-            VoxelNode voxelNode = CreateVoxelNode(currentSavedNode.type, currentSavedNode.value);
-            voxelNode.savedPorts = currentSavedNode.savedPorts;
-            string currentLine = voxelNode.CodeRepresentationPort(graph, voxelNode.savedPorts[0]);
+            VoxelNode voxelNode = currentSavedNode.nodeData.voxelNode;
+            string currentLine = voxelNode.CodeRepresentationPort(graph, voxelNode.savedPorts[0].portGuid);
             Debug.Log(currentLine);            
         }
 
@@ -180,7 +179,7 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
         else
         {
             //Gotta go back the "tree"
-            VoxelNode node = CreateVoxelNode(savedNodes[savedEdges[portguid].output.nodeGuid].type, savedNodes[savedEdges[portguid].output.nodeGuid].value);
+            VoxelNode node = savedNodes[savedEdges[portguid].output.nodeGuid].nodeData.voxelNode;
             return node.CodeRepresentationPort(graph, savedEdges[portguid].output.portGuid);
         }
         return null;

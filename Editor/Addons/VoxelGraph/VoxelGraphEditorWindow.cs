@@ -15,72 +15,49 @@ public class VoxelGraphEditorWindow : EditorWindow
 {
     //Main variables
     private VoxelGraphView currentGraphView;
-    private VisualElement graphViewsHolder;
-    private VisualElement menuElement;
     private VoxelGraphType currentVoxelGraphType;
     private VoxelGraphSerializer serializer;
-    private Toolbar toolbar;
     /// <summary>
-    /// Actually creates the graph windowasdgsdfgh
+    /// Actually creates the graph window
     /// </summary>
     [MenuItem("Voxel World/ Voxel Graph")]
     public static void OpenGraphWindow() 
     {
         var window = GetWindow<VoxelGraphEditorWindow>();
-        window.titleContent = new GUIContent("Generation Graph");
-        /*
-        window.serializer = new VoxelGraphSerializer() 
-        {
-            globalGraph = new SavedGlobalVoxelGraph()
-        };
-        */
-        //window.serializer.globalGraph.SetDefaultVars();        
-        window.GenerateMenu();
+        //window.TryClear();
+        window.titleContent = new GUIContent("Generation Graph");        
     }
 
     /// <summary>
-    /// Generate the main menu for the VoxelGraph
+    /// When the window is active
     /// </summary>
-    private void GenerateMenu()
+    public void OnEnable()
     {
-        if (menuElement == null)
+        serializer = new VoxelGraphSerializer()
         {
-            menuElement = new VisualElement();
-            menuElement.Add(new Button(() =>
-            {
-                string path = EditorUtility.OpenFilePanel("Load VoxelGraph", "Assets/", "voxelgraph");
-                if (path != "")
-                {
-                    serializer.LoadGlobalGraph(path);
-                    GenerateGraphView();
-                    SwitchGraphView(VoxelGraphType.Density);
-                }
-            })
-            { text = "Load VoxelGraph" });
-            menuElement.Add(new Button(() =>
-            {
-                serializer.LoadDefaultVoxelGraph();
-                GenerateGraphView();
-                SwitchGraphView(VoxelGraphType.Density);
-            })
-            { text = "Create VoxelGraph" });
-            menuElement.StretchToParentSize();
-            rootVisualElement.Add(menuElement);
-        }
+            globalGraph = new SavedGlobalVoxelGraph()
+        };
+
+        serializer.globalGraph.SetDefaultVars();
+        GenerateToolbar();
     }
 
     /// <summary>
     /// Generates the graphview
     /// </summary>
-    private void SwitchGraphView(VoxelGraphType voxelGraphType) 
+    private void SwitchGraphView(VoxelGraphType voxelGraphType, bool creatingNewOne = false, bool loadingGraph = false) 
     {
+        Vector3 viewPosition = Vector3.zero;
         //Save the old graph view
-        serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to save this VoxelGraph?");
+        if (!loadingGraph) serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to switch without saving?");
 
-        if (graphViewsHolder.childCount > 0) graphViewsHolder.Remove(currentGraphView);
+        if (currentGraphView != null) rootVisualElement.Remove(currentGraphView);
         currentVoxelGraphType = voxelGraphType;
 
-        var graphView = new VoxelGraphView(voxelGraphType, currentGraphView == null ? Vector3.zero : currentGraphView.viewTransform.position) { name = name, };
+        if (currentGraphView != null) viewPosition = currentGraphView.viewTransform.position;
+        if (creatingNewOne) viewPosition = Vector3.zero;
+
+        var graphView = new VoxelGraphView(voxelGraphType, viewPosition) { name = name, };
 
         switch (voxelGraphType)
         {
@@ -99,16 +76,15 @@ public class VoxelGraphEditorWindow : EditorWindow
 
         currentGraphView = graphView;
         graphView.StretchToParentSize();
-        graphViewsHolder.Add(graphView);
+        rootVisualElement.Insert(0, graphView);
     }
 
     /// <summary>
     /// Generate the window
     /// </summary>
-    private void GenerateGraphView()
+    private void GenerateToolbar()
     {
-        rootVisualElement.Remove(menuElement);
-        //Generate the toolbar
+        //Generate the toolbars
         Toolbar toolbar = new Toolbar();
         var saveButton = new Button(() => serializer.SaveLocalGraph(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
         var generateShaderButton = new Button(() => 
@@ -121,7 +97,27 @@ public class VoxelGraphEditorWindow : EditorWindow
         var switchToDensityGraph = new Button(() => SwitchGraphView(VoxelGraphType.Density)) { text = "Switch to Density Graph" };
         var switchToNormalGraph = new Button(() => SwitchGraphView(VoxelGraphType.CSM)) { text = "Switch to Color/Smoothness and Metallic Graph" };
         var switchToVoxelDetailsGraph = new Button(() => SwitchGraphView(VoxelGraphType.VoxelDetails)) { text = "Switch to VoxelDetails Graph" };
+
+        var loadButton = new Button(() =>
+        {
+            serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to load a new VoxelGraph without saving?");
+            string savePath = EditorUtility.OpenFilePanel("Load VoxelGraph", "Assets/", "voxelgraph");
+            if (savePath != "")
+            {
+                serializer.LoadGlobalGraph(savePath);
+                SwitchGraphView(VoxelGraphType.Density, loadingGraph: true);
+            }
+        }) { text = "Load VoxelGraph" };
+
+        var createButton = new Button(() =>
+        {
+            serializer.LoadDefaultVoxelGraph();
+            SwitchGraphView(VoxelGraphType.Density, creatingNewOne: true);
+        }) { text = "Create VoxelGraph" };
+
         //Add the buttons to the toolbar
+        toolbar.Add(loadButton);
+        toolbar.Add(createButton);
         toolbar.Add(saveButton);
         toolbar.Add(generateShaderButton);
 
@@ -130,35 +126,6 @@ public class VoxelGraphEditorWindow : EditorWindow
         toolbar.Add(switchToVoxelDetailsGraph);
 
         //Generate the graphViewsHolder
-        graphViewsHolder = new VisualElement();
-        graphViewsHolder.StretchToParentSize();        
-        rootVisualElement.Add(graphViewsHolder);
         rootVisualElement.Add(toolbar);
-    }
-
-    private void OnEnable()
-    {
-        AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
-    }
-
-    /// <summary>
-    /// Editor window reload fix. TODO: Actually do this
-    /// </summary>
-    private void OnAfterAssemblyReload()
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    /// When this window is destroyed, remove the splitViewer (Contains the two voxel graphs)
-    /// </summary>
-    private void OnDisable()
-    {
-        /*
-        serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, @"Are you sure you want to save this VoxelGraph?
-        PS: The window will still close!");
-        */
-        if (graphViewsHolder != null) rootVisualElement.Remove(graphViewsHolder);
-        if (toolbar != null) rootVisualElement.Remove(toolbar);
     }
 }

@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
+using System.Runtime.Serialization;
 
 /// <summary>
 /// Utility class for everything related to the generation graph
@@ -17,25 +18,39 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Main class for every type of node in the graph
     /// </summary>
+    [System.Serializable]
     public abstract class VoxelNode
     {
         //Main abstract stuff
+        /// <summary>
+        /// Serializable variables
+        /// </summary>
         abstract public string name { get; }
         public string nodeGuid;
-        protected List<VisualElement> inputVisualElements = new List<VisualElement>(), outputVisualElements = new List<VisualElement>();
-        public Dictionary<string, Port> ports = new Dictionary<string, Port>();
-        public List<string> savedPorts = new List<string>();
-        public bool saveLoaded = false;
-        public int portCount = 0;
-        protected Node node;
+        public List<GraphViewPortData> savedPorts;
+        public bool loadSavedPorts = false;
+
+        /// <summary>
+        /// Non serializable variables
+        /// </summary>
+        [NonSerialized] protected List<VisualElement> inputVisualElements, outputVisualElements;
+        [NonSerialized] public Dictionary<string, Port> ports;
+        [NonSerialized] protected Node node;
+        [NonSerialized] public int portCount = 0;
 
         /// <summary>
         /// Setup this node with a guid and a saved state
         /// </summary>
-        public virtual void Setup(string nodeGuid)
+        public virtual VoxelNode Setup(string nodeGuid, bool loadSavedPorts)
         {
             this.nodeGuid = nodeGuid;
-            saveLoaded = savedPorts != null;
+            this.loadSavedPorts = loadSavedPorts;
+            if (this.inputVisualElements == null) this.inputVisualElements = new List<VisualElement>(); this.outputVisualElements = new List<VisualElement>();
+            if (this.ports == null) this.ports = new Dictionary<string, Port>();
+            if (this.savedPorts == null) this.savedPorts = new List<GraphViewPortData>();
+            Debug.Log(savedPorts.Count);
+            this.node = null;
+            return this;
         }
 
         /// <summary>
@@ -44,14 +59,20 @@ public static partial class VoxelGraphUtility
         public virtual Port CreatePort(Direction portDirection, Type type, string name, Port.Capacity capacity = Port.Capacity.Single)
         {
             Port port = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, type);
+
             GraphViewPortData graphViewPortData;
 
-            //Load from saved ports if we are allowed to
-            if (saveLoaded) graphViewPortData = new GraphViewPortData { portGuid = savedPorts[portCount] };
-            else graphViewPortData = new GraphViewPortData { portGuid = Guid.NewGuid().ToString() };
-
+            if (loadSavedPorts) graphViewPortData = savedPorts[portCount];
+            else 
+            {
+                graphViewPortData = new GraphViewPortData()
+                {
+                    localPortIndex = portCount,
+                    portGuid = Guid.NewGuid().ToString()
+                };
+                savedPorts.Add(graphViewPortData);
+            }
             //Set variables
-            graphViewPortData.localPortIndex = portCount;
             port.userData = graphViewPortData;
             port.portName = name;
 
@@ -69,7 +90,6 @@ public static partial class VoxelGraphUtility
 
             //Save the ports
             ports.Add(graphViewPortData.portGuid, port);
-            if (!saveLoaded) savedPorts.Add(graphViewPortData.portGuid);
 
             portCount++;
             return port;
@@ -96,6 +116,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Position node
     /// </summary>
+    [System.Serializable]
     public class VNPosition : VoxelNode
     {
         //Main voxel node variables
@@ -122,6 +143,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Normal node
     /// </summary>
+    [System.Serializable]
     public class VNNormal : VoxelNode
     {
 
@@ -150,6 +172,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Node that tells us the zero-crossing point
     /// </summary>
+    [System.Serializable]
     public class VNSurfacePosition : VoxelNode
     {
         //Main voxel node variables
@@ -176,6 +199,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Node that tells us the zero-crossing point
     /// </summary>
+    [System.Serializable]
     public class VNSurfaceNormal : VoxelNode
     {
         //Main voxel node variables
@@ -203,6 +227,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Normal node
     /// </summary>
+    [System.Serializable]
     public class VNDensity : VoxelNode
     {
         //Main voxel node variables
@@ -222,6 +247,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Result node
     /// </summary>
+    [System.Serializable]
     public class VNResult : VoxelNode
     {
         //Main voxel node variables
@@ -249,6 +275,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// CSM Result node
     /// </summary>
+    [System.Serializable]
     public class VNCSMResult : VoxelNode
     {
         //Main voxel node variables
@@ -269,6 +296,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Voxel Details Result node
     /// </summary>
+    [System.Serializable]
     public class VNVoxelDetailsResult : VoxelNode
     {
         //Main voxel node variables
@@ -299,6 +327,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant voxel nodes
     /// </summary>
+    [System.Serializable]
     public abstract class VNConstants : VoxelNode
     {
         public object objValue;
@@ -307,6 +336,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant float class
     /// </summary>
+    [System.Serializable]
     public class VNConstantFloat : VNConstants
     {
         //Main voxel node variables
@@ -342,6 +372,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant Vector2 class
     /// </summary>
+    [System.Serializable]
     public class VNConstantVec2 : VNConstants
     {
         //Main voxel node variables
@@ -398,6 +429,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant Vector3 class
     /// </summary>
+    [System.Serializable]
     public class VNConstantVec3 : VNConstants
     {
         //Main voxel node variables
@@ -463,6 +495,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant Vector4 class
     /// </summary>
+    [System.Serializable]
     public class VNConstantVec4 : VNConstants
     {
         //Main voxel node variables
@@ -530,6 +563,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant Color class
     /// </summary>
+    [System.Serializable]
     public class VNConstantColor : VNConstants
     {
         //Main voxel node variables
@@ -573,6 +607,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant int class
     /// </summary>
+    [System.Serializable]
     public class VNConstantInt : VNConstants
     {
         //Main voxel node variables
@@ -606,6 +641,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constant bool class
     /// </summary>
+    [System.Serializable]
     public class VNConstantBool : VNConstants
     {
         //Main voxel node variables
@@ -643,11 +679,13 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Splitter voxel nodes
     /// </summary>
+    [System.Serializable]
     public abstract class VNSplitters : VoxelNode { }
 
     /// <summary>
     /// Splitter Vector2 class
     /// </summary>
+    [System.Serializable]
     public class VNSplitterVec2 : VNConstants
     {
         //Main voxel node variables
@@ -685,6 +723,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Splitter Vector3 class
     /// </summary>
+    [System.Serializable]
     public class VNSplitterVec3 : VNConstants
     {
         //Main voxel node variables
@@ -724,6 +763,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Splitter Vector4 class
     /// </summary>
+    [System.Serializable]
     public class VNSplittersVec4 : VNConstants
     {
         //Main voxel node variables
@@ -769,13 +809,13 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Shapes
     /// </summary>
-    public abstract class VNShape : VoxelNode
-    {
-    }
+    [System.Serializable]
+    public abstract class VNShape : VoxelNode { }
 
     /// <summary>
     /// Sphere adas
     /// </summary>
+    [System.Serializable]
     public class VNSphere : VNShape, IBoundCheckOptimizator
     {
         //Main voxel node variables
@@ -806,6 +846,7 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Cube
     /// </summary>
+    [System.Serializable]
     public class VNCube : VNShape
     {
         //Main voxel node variables
@@ -839,13 +880,13 @@ public static partial class VoxelGraphUtility
     /// <summary>
     /// Constructive-Solid-Geometry operations
     /// </summary>
-    public abstract class VNCSGOperation : VoxelNode
-    {
-    }
+    [System.Serializable]
+    public abstract class VNCSGOperation : VoxelNode { }
 
     /// <summary>
     /// Mathematical operations
     /// </summary>
+    [System.Serializable]
     public class VNCSGUnion : VoxelNode
     {
         //Main voxel node variables
@@ -876,6 +917,7 @@ public static partial class VoxelGraphUtility
     /// Arithmetic operations
     /// </summary>
     //Addition
+    [System.Serializable]
     public class VNMathAddition : VoxelNode
     {
         //Main voxel node variables
@@ -901,6 +943,7 @@ public static partial class VoxelGraphUtility
         }
     }
     //Subtraction
+    [System.Serializable]
     public class VNMathSubtraction : VoxelNode
     {
         //Main voxel node variables
@@ -926,6 +969,7 @@ public static partial class VoxelGraphUtility
         }
     }
     //Multiplication
+    [System.Serializable]
     public class VNMathMultiplication : VoxelNode
     {
         //Main voxel node variables
@@ -951,6 +995,7 @@ public static partial class VoxelGraphUtility
         }
     }
     //Division
+    [System.Serializable]
     public class VNMathDivision : VoxelNode
     {
         //Main voxel node variables
