@@ -7,7 +7,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static VoxelGraphUtility;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 /// <summary>
 /// Actual editor window that handles the editor stuff
 /// </summary>
@@ -17,15 +17,16 @@ public class VoxelGraphEditorWindow : EditorWindow
     private VoxelGraphView currentGraphView;
     private VoxelGraphType currentVoxelGraphType;
     private VoxelGraphSerializer serializer;
+    private string path;
     /// <summary>
     /// Actually creates the graph window
     /// </summary>
     [MenuItem("Voxel World/ Voxel Graph")]
-    public static void OpenGraphWindow() 
+    public static void OpenGraphWindow()
     {
         var window = GetWindow<VoxelGraphEditorWindow>();
         //window.TryClear();
-        window.titleContent = new GUIContent("Generation Graph");        
+        window.titleContent = new GUIContent("Generation Graph");
     }
 
     /// <summary>
@@ -37,20 +38,45 @@ public class VoxelGraphEditorWindow : EditorWindow
         {
             globalGraph = new SavedGlobalVoxelGraph()
         };
-
-        serializer.globalGraph.SetDefaultVars();
         GenerateToolbar();
+        if (currentGraphView != null)
+        {
+            SavedLocalVoxelGraph newSavedVoxelGraph = currentGraphView.SaveLocalVoxelGraph();
+            if (IsGraphDifferent(newSavedVoxelGraph, currentGraphView.currentSavedVoxelGraph))
+            {
+                if (EditorUtility.DisplayDialog("Switch without saving?", "Are you sure you want to switch without saving?", "Save", "Don't Save"))
+                {
+                    SaveCurrentGraphView();
+                }
+            }
+        }
+        if (path != "")
+        {
+            serializer.LoadGlobalGraph(path);
+            SwitchGraphView(VoxelGraphType.Density, loadingGraph: true);
+        }
+    }
+
+    public void OnDisable()
+    {
+        SaveCurrentGraphView();
     }
 
     /// <summary>
     /// Generates the graphview
     /// </summary>
-    private void SwitchGraphView(VoxelGraphType voxelGraphType, bool creatingNewOne = false, bool loadingGraph = false) 
+    private void SwitchGraphView(VoxelGraphType voxelGraphType, bool creatingNewOne = false, bool loadingGraph = false)
     {
         Vector3 viewPosition = Vector3.zero;
-        //Save the old graph view
-        if (!loadingGraph) serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to switch without saving?");
-
+        //Save the old voxel graph
+        if (!loadingGraph)
+        {
+            if (EditorUtility.DisplayDialog("Switch without saving?", "Are you sure you want to switch without saving?", "Save", "Don't Save"))
+            {
+                serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+                serializer.SaveGlobalGraph(path);
+            }            
+        }
         if (currentGraphView != null) rootVisualElement.Remove(currentGraphView);
         currentVoxelGraphType = voxelGraphType;
 
@@ -79,6 +105,13 @@ public class VoxelGraphEditorWindow : EditorWindow
         rootVisualElement.Insert(0, graphView);
     }
 
+    private void SaveCurrentGraphView() 
+    {
+        if(string.IsNullOrEmpty(path)) path = EditorUtility.SaveFilePanel("Save VoxelGraph:", "Assets/", "NewVoxelGraph", "voxelgraph");
+        serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+        serializer.SaveGlobalGraph(path);
+    }
+
     /// <summary>
     /// Generate the window
     /// </summary>
@@ -86,39 +119,48 @@ public class VoxelGraphEditorWindow : EditorWindow
     {
         //Generate the toolbars
         Toolbar toolbar = new Toolbar();
-        var saveButton = new Button(() => serializer.SaveLocalGraph(currentGraphView, currentVoxelGraphType)) { text = "Save Graph" };
-        var generateShaderButton = new Button(() => 
+        //Save button
+        var saveButton = new Button(() => 
         {
-            //string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
-            serializer.SaveLocalGraph(currentGraphView, currentVoxelGraphType);
-            CodeConverter.ConvertAndSave(serializer, "Assets/DefaultComputeShader.compute");
+            serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+            serializer.SaveGlobalGraph(path);
+        }) { text = "Save Graph" };
+
+        //Save as button
+        var saveAsButton = new Button(() => 
+        {
+            path = EditorUtility.SaveFilePanel("Save VoxelGraph:", "Assets/", "NewVoxelGraph", "voxelgraph");
+            serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+            serializer.SaveGlobalGraph(path);
+        }) { text = "Save Graph As" };
+
+        //Generate shader button
+        var generateShaderButton = new Button(() =>
+        {
+            GenerateShaderButton();
         }) { text = "Generate Shader" };
 
         var switchToDensityGraph = new Button(() => SwitchGraphView(VoxelGraphType.Density)) { text = "Switch to Density Graph" };
         var switchToNormalGraph = new Button(() => SwitchGraphView(VoxelGraphType.CSM)) { text = "Switch to Color/Smoothness and Metallic Graph" };
         var switchToVoxelDetailsGraph = new Button(() => SwitchGraphView(VoxelGraphType.VoxelDetails)) { text = "Switch to VoxelDetails Graph" };
-
+        //Loading an already existing voxel graph
         var loadButton = new Button(() =>
         {
-            serializer.SaveLocalGraphAskUser(currentGraphView, currentVoxelGraphType, "Are you sure you want to load a new VoxelGraph without saving?");
-            string savePath = EditorUtility.OpenFilePanel("Load VoxelGraph", "Assets/", "voxelgraph");
-            if (savePath != "")
-            {
-                serializer.LoadGlobalGraph(savePath);
-                SwitchGraphView(VoxelGraphType.Density, loadingGraph: true);
-            }
+            LoadButtonHandling();
         }) { text = "Load VoxelGraph" };
 
+        //Creating a new voxel graph by loading in the default one
         var createButton = new Button(() =>
         {
-            serializer.LoadDefaultVoxelGraph();
-            SwitchGraphView(VoxelGraphType.Density, creatingNewOne: true);
+            CreateButtonHandling();
+
         }) { text = "Create VoxelGraph" };
 
         //Add the buttons to the toolbar
         toolbar.Add(loadButton);
         toolbar.Add(createButton);
         toolbar.Add(saveButton);
+        toolbar.Add(saveAsButton);
         toolbar.Add(generateShaderButton);
 
         toolbar.Add(switchToDensityGraph);
@@ -127,5 +169,54 @@ public class VoxelGraphEditorWindow : EditorWindow
 
         //Generate the graphViewsHolder
         rootVisualElement.Add(toolbar);
+    }
+
+    private void GenerateShaderButton()
+    {
+        string path = EditorUtility.SaveFilePanel("Generate compute shader", "Assets/", "DefaultComputeShader.compute", "compute");
+        if (!string.IsNullOrEmpty(path))
+        {
+            serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+            serializer.SaveGlobalGraph(path);
+            CodeConverter.ConvertAndSave(serializer, "Assets/DefaultComputeShader.compute");
+        }
+    }
+
+    private void CreateButtonHandling()
+    {
+        //Make sure the user saved their graph
+        if (currentGraphView != null)
+        {
+            if (EditorUtility.DisplayDialog("Switch without saving?", "Are you sure you want to switch without saving?", "Save", "Don't Save"))
+            {
+                SaveCurrentGraphView();
+            }
+        }
+        //serializer.globalGraph.SetDefaultVars();
+        serializer.LoadDefaultVoxelGraph();
+        SwitchGraphView(VoxelGraphType.Density, loadingGraph: true);
+    }
+
+    private void LoadButtonHandling()
+    {
+        if (currentGraphView != null)
+        {
+            SavedLocalVoxelGraph newSavedVoxelGraph = currentGraphView.SaveLocalVoxelGraph();
+            if (IsGraphDifferent(newSavedVoxelGraph, currentGraphView.currentSavedVoxelGraph))
+            {
+                if (EditorUtility.DisplayDialog("Switch without saving?", "Are you sure you want to switch without saving?", "Save", "Don't Save"))
+                {
+                    SaveCurrentGraphView();
+                }
+            }
+        }
+
+        string loadPath = EditorUtility.OpenFilePanel("Load VoxelGraph", "Assets/", "voxelgraph");
+        if (loadPath != "")
+        {
+            serializer.LoadGlobalGraph(loadPath);
+            SwitchGraphView(VoxelGraphType.Density, loadingGraph: true);
+        }
+        path = loadPath;
     }
 }

@@ -8,7 +8,7 @@ using UnityEditor.Experimental.GraphView;
 using System.IO;
 using static VoxelGraphUtility;
 using static VoxelUtility;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 using System.Linq;
 /// <summary>
 /// Converts a VoxelGraphSO to a compute shader

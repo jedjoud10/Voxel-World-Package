@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 using static VoxelGraphUtility;
 using static VoxelUtility;
 using UnityEngine;
 using UnityEditor;
 
-public static partial class VoxelSavedGraphUtility
+public static partial class SavedVoxelGraphUtility
 {
     /// <summary>
     /// A whole voxel graph that's going to get wrapped

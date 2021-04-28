@@ -7,7 +7,7 @@ using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static VoxelGraphUtility;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 /// <summary>
 /// The graph view that handles the nodes
 /// </summary>
@@ -16,6 +16,7 @@ public class VoxelGraphView : GraphView
     //Main variables
     private readonly Vector2 defaultNodeSize = new Vector2(150, 200);
     public VoxelGraphType voxelGraphType;
+    public SavedLocalVoxelGraph currentSavedVoxelGraph;
 
     /// <summary>
     /// Constructor
@@ -63,7 +64,9 @@ public class VoxelGraphView : GraphView
             input.Connect(newEdge);
             output.Connect(newEdge);
             this.Add(newEdge);
-        }        
+        }
+
+        currentSavedVoxelGraph = savedVoxelGraph;
     }
 
     /// <summary>
@@ -71,7 +74,7 @@ public class VoxelGraphView : GraphView
     /// </summary>
     public SavedLocalVoxelGraph SaveLocalVoxelGraph()
     {        
-        SavedLocalVoxelGraph savedVoxelGraph = new SavedLocalVoxelGraph();
+        SavedLocalVoxelGraph newVoxelGraph = new SavedLocalVoxelGraph();
         //Nodes
         foreach (var node in nodes)
         {
@@ -83,7 +86,7 @@ public class VoxelGraphView : GraphView
                 nodeData = graphViewNodeData
             };
 
-            savedVoxelGraph.nodes.Add(graphViewNodeData.guid, savedNode);
+            newVoxelGraph.nodes.Add(graphViewNodeData.guid, savedNode);
         }
         //Edges
         foreach (var edge in edges)
@@ -101,42 +104,14 @@ public class VoxelGraphView : GraphView
                     nodeGuid = ((GraphViewNodeData)edge.output.node.userData).guid
                 },
             };
-            savedVoxelGraph.edges.Add(savedEdge.input.portGuid, savedEdge);
+            newVoxelGraph.edges.Add(savedEdge.input.portGuid, savedEdge);
         }
 
-        return savedVoxelGraph;
+        currentSavedVoxelGraph = newVoxelGraph;
+
+        return newVoxelGraph;
     }
 
-    /// <summary>
-    /// Save a specific voxel graph after asking the user
-    /// </summary>
-    public SavedLocalVoxelGraph SaveLocalVoxelGraph(SavedLocalVoxelGraph currentSLVG, string message, out bool save)
-    {
-        SavedLocalVoxelGraph newSLVG = new SavedLocalVoxelGraph();
-        newSLVG = SaveLocalVoxelGraph();
-
-        //Check if we have a different count, if so then it means it's different
-        bool differentCount = (newSLVG.nodes.Count != currentSLVG.nodes.Count || newSLVG.edges.Count != currentSLVG.edges.Count);
-        bool differentElements = false;
-
-        SavedVoxelNodeComparer comparer = new SavedVoxelNodeComparer();
-        differentElements = !newSLVG.nodes.SequenceEqual(currentSLVG.nodes, comparer);
-        bool different = differentCount || differentElements;
-
-        save = false;
-
-        if (different)
-        {
-            save = EditorUtility.DisplayDialog("Want to save?", message, "Save", "Don't Save");
-            return newSLVG;
-        }
-        else
-        {
-            save = false;
-            return newSLVG;
-        }
-        return null;
-    }
 
     /// <summary>
     /// Build a custom context menu

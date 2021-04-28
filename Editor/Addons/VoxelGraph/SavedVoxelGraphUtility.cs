@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 using static VoxelGraphUtility;
 using static VoxelUtility;
 using UnityEngine;
 using UnityEditor;
 
-public static partial class VoxelSavedGraphUtility 
+public static partial class SavedVoxelGraphUtility 
 {
     /// <summary>
     /// Custom IEqualityComparer from https://stackoverflow.com/questions/6413108/how-do-i-check-if-two-objects-are-equal-in-terms-of-their-properties-only-withou
@@ -31,6 +31,22 @@ public static partial class VoxelSavedGraphUtility
         {
             throw new System.NotImplementedException();
         }
+    }
+
+
+    /// <summary>
+    /// Check the differences between two local voxel graphs
+    /// </summary>
+    public static bool IsGraphDifferent(SavedLocalVoxelGraph a, SavedLocalVoxelGraph b)
+    {
+        //Check if we have a different count, if so then it means it's different
+        bool differentCount = (a.nodes.Count != b.nodes.Count || a.edges.Count != b.edges.Count);
+        bool differentElements = false;
+
+        SavedVoxelNodeComparer comparer = new SavedVoxelNodeComparer();
+        differentElements = !a.nodes.SequenceEqual(b.nodes, comparer);
+        bool different = differentCount || differentElements;
+        return different;
     }
 
     /// <summary>

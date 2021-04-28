@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEditor.Experimental.GraphView;
 using static VoxelUtility;
 using static VoxelGraphUtility;
-using static VoxelSavedGraphUtility;
+using static SavedVoxelGraphUtility;
 using System;
 using System.Linq;
 using UnityEngine.UIElements;
@@ -43,12 +43,12 @@ public static partial class VoxelGraphUtility
         /// </summary>
         public virtual VoxelNode Setup(string nodeGuid, bool loadSavedPorts)
         {
+            this.portCount = 0;
             this.nodeGuid = nodeGuid;
             this.loadSavedPorts = loadSavedPorts;
-            if (this.inputVisualElements == null) this.inputVisualElements = new List<VisualElement>(); this.outputVisualElements = new List<VisualElement>();
-            if (this.ports == null) this.ports = new Dictionary<string, Port>();
-            if (this.savedPorts == null) this.savedPorts = new List<GraphViewPortData>();
-            Debug.Log(savedPorts.Count);
+            this.inputVisualElements = new List<VisualElement>(); this.outputVisualElements = new List<VisualElement>();
+            this.ports = new Dictionary<string, Port>();
+            if (!loadSavedPorts) this.savedPorts = new List<GraphViewPortData>();
             this.node = null;
             return this;
         }
@@ -61,7 +61,6 @@ public static partial class VoxelGraphUtility
             Port port = node.InstantiatePort(Orientation.Horizontal, portDirection, capacity, type);
 
             GraphViewPortData graphViewPortData;
-
             if (loadSavedPorts) graphViewPortData = savedPorts[portCount];
             else 
             {
@@ -711,9 +710,9 @@ public static partial class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeGuid}_x = {((Vector2)objValue).x};";
+                    return $"float {nodeGuid}_x = {((SavableVec2)objValue).x};";
                 case 2:
-                    return $"float {nodeGuid}_y = {((Vector2)objValue).y};";
+                    return $"float {nodeGuid}_y = {((SavableVec2)objValue).y};";
                 default:
                     return "";
             }
@@ -749,11 +748,11 @@ public static partial class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeGuid}_x = {((Vector3)objValue).x};";
+                    return $"float {nodeGuid}_x = {CodeConverter.EvaluatePort(savedVoxelGraph, portguid, null)}.x;";
                 case 2:
-                    return $"float {nodeGuid}_y = {((Vector3)objValue).y};";
+                    return $"float {nodeGuid}_y = {CodeConverter.EvaluatePort(savedVoxelGraph, portguid, null)}.y;";
                 case 3:
-                    return $"float {nodeGuid}_z = {((Vector3)objValue).z};";
+                    return $"float {nodeGuid}_z = {CodeConverter.EvaluatePort(savedVoxelGraph, portguid, null)}.z;";
                 default:
                     return "";
             }
@@ -790,13 +789,13 @@ public static partial class VoxelGraphUtility
             switch (((GraphViewPortData)ports[portguid].userData).localPortIndex)
             {
                 case 1:
-                    return $"float {nodeGuid}_x = {((Vector4)objValue).x};";
+                    return $"float {nodeGuid}_x = {((SavableVec4)objValue).x};";
                 case 2:
-                    return $"float {nodeGuid}_y = {((Vector4)objValue).y};";
+                    return $"float {nodeGuid}_y = {((SavableVec4)objValue).y};";
                 case 3:
-                    return $"float {nodeGuid}_z = {((Vector4)objValue).z};";
+                    return $"float {nodeGuid}_z = {((SavableVec4)objValue).z};";
                 case 4:
-                    return $"float {nodeGuid}_w = {((Vector4)objValue).w};";
+                    return $"float {nodeGuid}_w = {((SavableVec4)objValue).w};";
                 default:
                     return "";
             }
