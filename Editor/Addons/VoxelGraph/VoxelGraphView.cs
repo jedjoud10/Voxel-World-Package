@@ -162,7 +162,7 @@ public class VoxelGraphView : GraphView
         {
             VoxelNode voxelNode = (VoxelNode)Activator.CreateInstance(type);
             //Main data
-            string guid = Guid.NewGuid().ToString();
+            string guid = NewGUID();
             data = new GraphViewNodeData()
             {
                 guid = guid,

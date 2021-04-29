@@ -67,7 +67,7 @@ public static partial class VoxelGraphUtility
                 graphViewPortData = new GraphViewPortData()
                 {
                     localPortIndex = portCount,
-                    portGuid = Guid.NewGuid().ToString()
+                    portGuid = NewGUID()
                 };
                 savedPorts.Add(graphViewPortData);
             }

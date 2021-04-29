@@ -96,7 +96,7 @@ public static partial class SavedVoxelGraphUtility
         {
             //Generate the default Density graph node
             densityGraph = new SavedLocalVoxelGraph();
-            string guid = Guid.NewGuid().ToString();
+            string guid = NewGUID();
             var defaultNode = new SavedVoxelNode()
             {
                 posx = 0,
@@ -107,13 +107,13 @@ public static partial class SavedVoxelGraphUtility
                     voxelNode = new VNResult().Setup(guid, false),                    
                 }                
             };
-            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 0, portGuid = Guid.NewGuid().ToString() });
+            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 0, portGuid = NewGUID() });
             densityGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             densityGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default CSM graph if it wasn't generated yet
             csmGraph = new SavedLocalVoxelGraph();
-            guid = Guid.NewGuid().ToString();
+            guid = NewGUID();
             defaultNode = new SavedVoxelNode()
             {
                 posx = 0,
@@ -124,14 +124,14 @@ public static partial class SavedVoxelGraphUtility
                     voxelNode = new VNCSMResult().Setup(guid, false),
                 }
             };
-            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 0, portGuid = Guid.NewGuid().ToString() });
-            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 1, portGuid = Guid.NewGuid().ToString() });
+            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 0, portGuid = NewGUID() });
+            defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = 1, portGuid = NewGUID() });
             csmGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             csmGraph.edges = new Dictionary<string, SavedVoxelEdge>();
 
             //Generate the default VoxelDetails graph if it wasn't generated yet        
             voxelDetailsGraph = new SavedLocalVoxelGraph();
-            guid = Guid.NewGuid().ToString();
+            guid = NewGUID();
             defaultNode = new SavedVoxelNode()
             {
                 posx = 0,
@@ -142,7 +142,7 @@ public static partial class SavedVoxelGraphUtility
                     voxelNode = new VNVoxelDetailsResult().Setup(guid, false),
                 }
             };
-            for(int i = 0; i < 5; i++) defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = i, portGuid = Guid.NewGuid().ToString() });
+            for(int i = 0; i < 5; i++) defaultNode.nodeData.voxelNode.savedPorts.Add(new GraphViewPortData() { localPortIndex = i, portGuid = NewGUID() });
             voxelDetailsGraph.nodes = new Dictionary<string, SavedVoxelNode>(1) { { defaultNode.nodeData.guid, defaultNode } };
             voxelDetailsGraph.edges = new Dictionary<string, SavedVoxelEdge>();
             defaultSet = true;
