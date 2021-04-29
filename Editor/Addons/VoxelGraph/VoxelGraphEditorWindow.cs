@@ -105,11 +105,17 @@ public class VoxelGraphEditorWindow : EditorWindow
         rootVisualElement.Insert(0, graphView);
     }
 
+    /// <summary>
+    /// Saves the current graph view into a file that the user specified
+    /// </summary>
     private void SaveCurrentGraphView() 
     {
         if(string.IsNullOrEmpty(path)) path = EditorUtility.SaveFilePanel("Save VoxelGraph:", "Assets/", "NewVoxelGraph", "voxelgraph");
-        serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
-        serializer.SaveGlobalGraph(path);
+        if (!string.IsNullOrEmpty(path))
+        {
+            serializer.SaveLocalGraph(currentGraphView.SaveLocalVoxelGraph(), currentVoxelGraphType);
+            serializer.SaveGlobalGraph(path);
+        }
     }
 
     /// <summary>

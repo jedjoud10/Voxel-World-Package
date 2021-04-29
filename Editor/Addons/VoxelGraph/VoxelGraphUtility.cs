@@ -39,4 +39,13 @@ public static partial class VoxelGraphUtility
             .Select(type => (VoxelNode)Activator.CreateInstance(type))
             .ToList();
     }
+
+    /// <summary>
+    /// Generate a new random GUID with some specified rules, like without "-"
+    /// </summary>
+    /// <returns></returns>
+    public static string NewGUID() 
+    {
+        return Guid.NewGuid().ToString().Replace("-", "");
+    }
 }

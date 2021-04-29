@@ -23,7 +23,6 @@ public static class CodeConverter
     /// <summary>
     /// Convert the VoxelGraphSO to a string that is going to be used as compute shader
     /// </summary>
-    /// <param name="voxelGraphSO"></param>
     public static void ConvertAndSave(VoxelGraphSerializer serializer, string path) 
     {        
         
