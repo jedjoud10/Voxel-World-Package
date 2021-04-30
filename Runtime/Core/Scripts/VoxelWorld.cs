@@ -63,7 +63,7 @@ public class VoxelWorld : MonoBehaviour
 
     //Constant settings
     public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 64;//The resolution of each chunk> Can either be 8-16-32-64
+    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
     public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
 
 
