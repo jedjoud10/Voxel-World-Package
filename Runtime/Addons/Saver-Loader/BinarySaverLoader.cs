@@ -6,7 +6,9 @@ using System.IO;
 using System.Threading.Tasks;
 public static class BinaryLoaderSaver
 {
-    //Load
+    /// <summary>
+    /// Load an object
+    /// </summary>
     public static object Load(string path)
     {
         Debug.Log("Load object " + path);
@@ -19,7 +21,9 @@ public static class BinaryLoaderSaver
         stream.Close();
         return data;
     }
-    //Save
+    /// <summary>
+    /// Save an object
+    /// </summary>
     public static void Save(string path, object data)
     {
         Debug.Log("Save object " + path);

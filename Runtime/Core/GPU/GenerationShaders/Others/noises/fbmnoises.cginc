@@ -10,4 +10,14 @@ float fbmSnoise(float3 p, float pe, float la, float o)
     }
     return noiseDensity / maxNoiseDensity;
 }
-
+float fbmCellular(float3 p, float pe, float la, float o)
+{
+    float noiseDensity = 0;
+    float maxNoiseDensity = 0;
+    for (int i = 0; i < o; i++)
+    {
+        noiseDensity += ((1 - cellular(p * pow(la, i))) * pow(pe, i));
+        maxNoiseDensity += pow(pe, i);
+    }
+    return noiseDensity / maxNoiseDensity;
+}
