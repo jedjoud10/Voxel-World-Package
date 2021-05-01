@@ -6,6 +6,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
 using static VoxelUtility;
+using static Unity.Mathematics.math;
 public struct MeshingJob : IJobParallelFor
 {
     //Marching Cubes variables

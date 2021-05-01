@@ -6,6 +6,7 @@ using Unity.Jobs;
 using Unity.Mathematics;
 using Unity.Burst;
 using static VoxelUtility;
+using static Unity.Mathematics.math;
 /// <summary>
 /// Job that transforms the triangles from the MarchingCubesJob into an actual mesh, with vertex sharing
 /// </summary>
@@ -36,8 +37,8 @@ public struct VertexMergingJob : IJob
                     hashmap.Add(vert.position, vertices.Length);
                     map.Add(vertices.Length);
                     vertices.Add(vert.position);
-                    colors.Add(math.float4(vert.color, 1));
-                    normals.Add(lowpoly ? math.float3(1) : vert.normal);
+                    colors.Add(float4(vert.color, 1));
+                    normals.Add(lowpoly ? float3(1) : vert.normal);
                     uvs.Add(vert.uv);
                 }
                 else
