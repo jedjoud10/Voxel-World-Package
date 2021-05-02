@@ -18,10 +18,10 @@ public class VoxelWorld : MonoBehaviour
 {
     //Main settings
     [Header("Main Settings")]
+    public bool debug;
     public GameObject chunkPrefab;
     public bool lowpoly;
-    public Material normalMaterial;
-    public Material lowpolyMaterial;
+    public Material material;
     [Range(0, 5)]
     public int targetFrameDelay = 5;
 
@@ -199,7 +199,7 @@ public class VoxelWorld : MonoBehaviour
                 Destroy(currentChunk.chunkGameObject);
             }
             voxelDetailsManager.InstantiateVoxelDetails(currentChunk);
-            currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = lowpoly ? lowpolyMaterial : normalMaterial;
+            currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = material;
             currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
             currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
         }
@@ -309,8 +309,9 @@ public class VoxelWorld : MonoBehaviour
     /// <summary>
     /// Draw some gizmos
     /// </summary>
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
+        if (!debug) return;
         if (octree != null)
         {
             Gizmos.color = Color.green;
@@ -329,6 +330,7 @@ public class VoxelWorld : MonoBehaviour
     //Show some debug info
     private void OnGUI()
     {
+        if (!debug) return;
         GUILayout.BeginVertical("box");
         GUILayout.Label("Nodes in total: " + octree.nodes.Count);
         GUILayout.Label("Nodes to add: " + octree.toAdd.Count);

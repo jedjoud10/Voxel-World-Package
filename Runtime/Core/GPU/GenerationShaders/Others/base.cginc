@@ -17,6 +17,7 @@ float3 mod7(float3 x) {
     return x - floor(x * (1.0 / 7.0)) * 7.0;
 }
 
+float seedHash;
 #include "Packages/Voxel-World-Package/Runtime/Core/GPU//GenerationShaders/Others/SDFFunctions.cginc"
 #include "Packages/Voxel-World-Package/Runtime/Core/GPU//GenerationShaders/Others/noises/cellular3D.cginc"
 #include "Packages/Voxel-World-Package/Runtime/Core/GPU//GenerationShaders/Others/noises/noise3D.cginc"
