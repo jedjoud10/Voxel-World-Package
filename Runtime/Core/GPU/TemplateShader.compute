@@ -1,0 +1,38 @@
+
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VoxelMain
+#pragma kernel VoxelFinal
+#include "Packages/Voxel-World-Package/Runtime/Core/GPU/GenerationShaders/Others/base.cginc"
+
+//Density function
+float Density(float3 p, float3 lp)
+{
+    float density = p.y;
+    return density;
+}
+//Get the color, smoothness, and metallic all in one function
+ColorSmoothnessMetallic GetCSM(float3 p, float3 lp, float3 n)
+{
+    ColorSmoothnessMetallic csm;
+    csm.color = n;
+    csm.sm = 0;
+
+    csm.color = saturate(csm.color);
+    csm.sm = saturate(csm.sm);
+    return csm;
+}
+//This is ran for every intersecting edge in the volume, allows us to place any voxel detail on the surface
+void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
+{
+    if (hash13(sp) > 0.9)
+    {
+        VoxelDetail detail;
+        detail.position = sp;
+        detail.forward = sn;
+        detail.size = 1;
+        detail.type = 0;
+        detailsBuffer.Append(detail);
+    }
+}
+
+#include "Packages/Voxel-World-Package/Runtime/Core/GPU/GenerationShaders/Others/end.cginc"

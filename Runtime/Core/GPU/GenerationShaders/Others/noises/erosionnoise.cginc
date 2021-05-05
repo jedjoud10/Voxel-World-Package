@@ -24,7 +24,7 @@ float2 hash(in float2 x)
 {
     const float2 k = float2(0.3183099, 0.3678794);
     x = x * k + k.yx;
-    return -1.0 + 2.0 * frac(16.0 * k * frac(x.x * x.y * (x.x + x.y)));
+    return -1.0 + 2.0 * frac(16.0 * k * frac(x.x * x.y * (x.x + x.y)) + seedHash);
 }
 
 

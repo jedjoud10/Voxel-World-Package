@@ -6,6 +6,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
 using static VoxelUtility;
+using static Unity.Mathematics.math;
 /// <summary>
 /// Turns the GPU data into a mesh
 /// </summary>
@@ -350,8 +351,8 @@ public struct MarchingCubesJob : IJobParallelFor
     };
     public void Execute(int index)
     {
-        int3 pos = VoxelUtility.UnflattenIndex(index, resolution-3);
-        int i = VoxelUtility.FlattenIndex(pos + math.int3(1, 1, 1), resolution);
+        int3 pos = UnflattenIndex(index, resolution-3);
+        int i = FlattenIndex(pos + math.int3(1, 1, 1), resolution);
         //Indexing
         int mcCase = 0;
         if (voxels[i + 0].density < isolevel) mcCase |= 1;
@@ -374,8 +375,8 @@ public struct MarchingCubesJob : IJobParallelFor
                     int tri = mcTable[mcCase * 16 + t + h];
 
                     //Find the zero-crossing point
-                    float lerpValue = math.unlerp(voxels[i + edgesToCornerIndices[tri]].density, voxels[i + edgesToCornerIndices2[tri]].density, isolevel);
-                    float3 vertex = (math.lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
+                    float lerpValue = unlerp(voxels[i + edgesToCornerIndices[tri]].density, voxels[i + edgesToCornerIndices2[tri]].density, isolevel);
+                    float3 vertex = (lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
                     
                     Voxel a = voxels[i + edgesToCornerIndices[tri]];
                     Voxel b = voxels[i + edgesToCornerIndices2[tri]];
@@ -383,9 +384,9 @@ public struct MarchingCubesJob : IJobParallelFor
                     triangle[h] = new MeshVertex()
                     {
                         position = vertex,
-                        color = math.lerp(a.color, b.color, lerpValue),
-                        normal = math.lerp(a.normal, b.normal, lerpValue),
-                        uv = math.lerp(a.sm, b.sm, lerpValue)
+                        color = lerp(a.color, b.color, lerpValue),
+                        normal = lerp(a.normal, b.normal, lerpValue),
+                        uv = lerp(a.sm, b.sm, lerpValue)
                     };
                 }
                 mcTriangles.AddNoResize(triangle);
