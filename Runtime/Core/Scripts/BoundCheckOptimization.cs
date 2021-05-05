@@ -12,10 +12,9 @@ public static class BoundCheckOptimization
     /// </summary>
     /// <param name="node"></param>
     /// <returns></returns>
-    public static bool CheckNode(OctreeNode node) 
+    public static bool CheckNode(OctreeNode node, CameraData cameraData) 
     {
         return true;
-        return NodeIntersectWithBounds(node, new VoxelAABBBound() { min = new Vector3(-50000, -1, -50000), max = new Vector3(50000, 1, 50000) });
-        return node.chunkPosition.y < 50 && node.chunkPosition.y > -90;
+        return NodeIntersectWithBounds(node, new VoxelAABBBound() { min = new Vector3(-5, -5, -5), max = new Vector3(5, 5, 5) });
     }
 }

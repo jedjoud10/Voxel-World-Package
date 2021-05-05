@@ -16,6 +16,6 @@ public class ChunkLoader : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        voxelWorld.cameraData = new VoxelUtility.CameraData() { position = transform.position, forwardVector = transform.forward };
+        voxelWorld.camData = new VoxelUtility.CameraData() { position = transform.position, forwardVector = transform.forward };
     }    
 }

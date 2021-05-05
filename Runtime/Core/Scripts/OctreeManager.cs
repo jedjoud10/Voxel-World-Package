@@ -8,7 +8,7 @@ using static VoxelUtility;
 /// <summary>
 /// My octree implementation
 /// </summary>
-public class Octree
+public class OctreeManager
 {
     //Main octree variables
     public List<OctreeNode> nodes;
@@ -24,7 +24,7 @@ public class Octree
     /// <summary>
     /// Initialize the octree with a reference to the voxel world
     /// </summary>
-    public Octree(VoxelWorld voxelWorld)
+    public OctreeManager(VoxelWorld voxelWorld)
     {
         maxHierarchyIndex = voxelWorld.maxHierarchyIndex;
         nodes = new List<OctreeNode>();
@@ -42,17 +42,6 @@ public class Octree
     {
         //CreateOctreeThreaded(new object[] { cameraData });
         ThreadPool.QueueUserWorkItem(CreateOctreeThreaded, new object[] { cameraData });
-    }
-
-    /// <summary>
-    /// Checks what nodes we need to edit. W.I.P
-    /// </summary>
-    /// <param name="voxelEditRequestBatch">A request batch to edit the terrain with</param>
-    public void CheckNodesToEdit(VoxelEditRequestBatch voxelEditRequestBatch)
-    {
-        //CheckNodesToEditThreaded(new object[] { voxelEditRequest });
-        //CheckNodesToEditThreaded(new object[] { (center - new Vector3(size / 2, size / 2, size / 2)), (center + new Vector3(size / 2, size / 2, size / 2)) });
-        ThreadPool.QueueUserWorkItem(CheckNodesToEditThreaded, new object[] { voxelEditRequestBatch });
     }
 
     /// <summary>
@@ -91,7 +80,6 @@ public class Octree
             int[] childrenPointers = new int[8];
             if (Vector3.Distance(cameraData.position, octreeParentNode.chunkPosition + new Vector3(octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f, octreeParentNode.chunkSize / 2f)) < (octreeParentNode.chunkSize + voxelWorld.LODBias) && octreeParentNode.hierarchyIndex < maxHierarchyIndex)
             {
-                bool added = true;
                 for (int x = 0; x < 2; x++)
                 {
                     for (int y = 0; y < 2; y++)
@@ -111,21 +99,23 @@ public class Octree
                             octreeChild.hierarchyIndex = octreeParentNode.hierarchyIndex + 1;
                             octreeChild.isLeaf = true;
                             childrenPointers[childrenIndex] = newNodes.Count;
-                            localNodeIndexPointers.Add(octreeChild, newNodes.Count);
-                            nodesToProcess.Add(octreeChild);
-                            added = BoundCheckOptimization.CheckNode(octreeParentNode);
-                            if(added) newNodes.Add(octreeChild);
+
+                            //Should we even add this node?
+                            if (BoundCheckOptimization.CheckNode(octreeChild, cameraData))
+                            {
+                                localNodeIndexPointers.Add(octreeChild, newNodes.Count);
+                                nodesToProcess.Add(octreeChild);
+                                newNodes.Add(octreeChild);
+                            }
                             childrenIndex++;
                         }
                     }
                 }
-                if (added)
-                {
-                    int index = localNodeIndexPointers[octreeParentNode];
-                    newNodes.RemoveAt(index);
-                    octreeParentNode.isLeaf = false;
-                    newNodes.Insert(index, octreeParentNode);
-                }
+                int index = localNodeIndexPointers[octreeParentNode];
+                newNodes.RemoveAt(index);
+                octreeParentNode.isLeaf = false;
+                newNodes.Insert(index, octreeParentNode);
+                
                 //newNodes.Add(octreeParentNode);
             }
             localChildrenCarriers.Add(octreeParentNode, new OctreeNodeChildrenCarrier { children = childrenPointers });
@@ -140,78 +130,16 @@ public class Octree
         addedOctreeNodesHashset.IntersectWith(difference);
         removedOctreeNodesHashset.IntersectWith(difference);
 
+        //Gotta make this override the current chunk requuests later on
         if (toAdd.Count == 0 && toRemove.Count == 0)
         {
             toRemove.Clear();
             toAdd.Clear();
             List<OctreeNode> toAddLocal = new List<OctreeNode>(addedOctreeNodesHashset);
-            toAdd = toAddLocal.OrderByDescending(x => (Vector3.Dot((x.chunkPosition - cameraData.position).normalized, cameraData.forwardVector)) + x.hierarchyIndex).ToList();
+            toAdd = toAddLocal.OrderByDescending(x => (Vector3.Dot((x.chunkPosition - cameraData.position).normalized, cameraData.forwardVector)) * 30 + x.hierarchyIndex).ToList();
             toRemove.AddRange(removedOctreeNodesHashset);
             nodesChildrenCarrier = localChildrenCarriers;
             nodes = newNodes;//Update octree
-        }
-    }
-
-    /// <summary>
-    /// Checks what nodes we need to edit in another thread
-    /// </summary>
-    /// <param name="state">State passed from main thread</param>
-    public void CheckNodesToEditThreaded(object state)
-    {
-        VoxelEditRequestBatch voxelEditRequestBatch = (VoxelEditRequestBatch)((object[])state)[0];
-        for (int b = 0; b < voxelEditRequestBatch.voxelEditRequests.Count; b++)
-        {
-            List<OctreeNode> nodesToProcess = new List<OctreeNode>();
-            nodesToProcess.Add(nodes[0]);
-            for (int i = 0; i < nodesToProcess.Count; i++)
-            {
-                OctreeNode octreeParentNode = nodesToProcess[i];
-                //Create octree children 
-
-                //Create children
-                int childrenIndex = 0;
-                if (nodesChildrenCarrier.ContainsKey(octreeParentNode))
-                {
-                    int[] children = nodesChildrenCarrier[octreeParentNode].children;
-                    //Check if the edit is inside/intersecting with the node AABB
-                    if (NodeIntersectWithBounds(octreeParentNode, voxelEditRequestBatch.voxelEditRequests[b].bound) && octreeParentNode.hierarchyIndex < maxHierarchyIndex)
-                    {
-                        for (int x = 0; x < 2; x++)
-                        {
-                            for (int y = 0; y < 2; y++)
-                            {
-                                for (int z = 0; z < 2; z++)
-                                {
-                                    //Setup Octree child
-                                    OctreeNode octreeChild = nodes[children[childrenIndex]];
-                                    if (NodeIntersectWithBounds(octreeChild, voxelEditRequestBatch.voxelEditRequests[b].bound) && octreeChild.hierarchyIndex > octreeParentNode.hierarchyIndex)
-                                    {
-                                        nodesToProcess.Add(octreeChild);
-                                        if (voxelWorld.chunks.ContainsKey(octreeChild) && octreeChild.isLeaf)
-                                        {
-                                            Chunk chunk = voxelWorld.chunks[octreeChild];
-                                            //Avoid duplicates
-                                            if (!voxelWorld.chunkUpdateRequests.ContainsKey(octreeChild))
-                                            {
-                                                //world.GenerateMesh(chunk.position, chunk, true, resolution, 1);
-                                                voxelWorld.chunksUpdating.Add(chunk);
-                                                voxelWorld.chunkUpdateRequests.Add(octreeChild, new ChunkUpdateRequest { chunk = chunk, priority = octreeChild.hierarchyIndex });
-                                            }
-                                        }
-                                    }
-                                    childrenIndex++;
-                                }
-                            }
-                        }
-                    }
-                }
-                //Just in case
-                if (i > 100000)
-                {
-                    Debug.LogError("Octree just gave up... R.I.P Octree you will be missed");
-                    break;
-                }
-            }
         }
     }
 }

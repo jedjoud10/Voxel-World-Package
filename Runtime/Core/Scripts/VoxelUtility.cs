@@ -133,6 +133,10 @@ public static class VoxelUtility
         public Vector3 chunkCenter;
         public float chunkSize;
         public bool isLeaf;
+        public override string ToString()
+        {
+            return $"Position: {position}, Index: {hierarchyIndex}, ChunkPos: {chunkPosition}, ChunkSize: {chunkSize}";
+        }
     }
 
     /// <summary>

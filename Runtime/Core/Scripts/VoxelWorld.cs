@@ -40,7 +40,7 @@ public class VoxelWorld : MonoBehaviour
     public Dictionary<OctreeNode, ChunkUpdateRequest> chunkUpdateRequests;
     public HashSet<Chunk> chunksUpdating;
     public Dictionary<OctreeNode, Chunk> chunks;
-    public Octree octree;
+    public OctreeManager octree;
     [HideInInspector]
     public VoxelEditsManager voxelEditsManager;
     [HideInInspector]
@@ -49,7 +49,7 @@ public class VoxelWorld : MonoBehaviour
     public bool generating;
     private bool finishedStartGeneration = false, tempStartGeneration = false;
     public event Action OnVoxelWorldFinishedGeneration;
-    public CameraData cameraData;
+    public CameraData camData, lastFrameCamData;
 
     //GPU-CPU Stuff
     private ComputeBuffer voxelsBuffer;
@@ -77,7 +77,7 @@ public class VoxelWorld : MonoBehaviour
     void Start()
     {
         //Initialize everything
-        octree = new Octree(this);
+        octree = new OctreeManager(this);
         voxelEditsManager = new VoxelEditsManager(this);
         voxelDetailsManager = GetComponent<VoxelDetailsManager>();
         voxelDetailsManager.Setup(this);
@@ -124,10 +124,7 @@ public class VoxelWorld : MonoBehaviour
         generating = chunkUpdateRequests.Count > 0 || octree.toAdd.Count > 0 || octree.toRemove.Count > 0 || chunksUpdating.Count > 0;
 
         //Update the octree
-        if (!generating && Time.frameCount % 20 == 0)
-        {
-            octree.UpdateOctree(cameraData);
-        }
+        if (!generating && Time.frameCount % 20 == 0 || !camData.Equals(lastFrameCamData)) octree.UpdateOctree(camData);
 
         //Generate a single mesh
         if (chunkUpdateRequests.Count > 0 && completed)
@@ -211,6 +208,7 @@ public class VoxelWorld : MonoBehaviour
             finishedStartGeneration = true;
             OnVoxelWorldFinishedGeneration?.Invoke();
         }
+        lastFrameCamData = camData;
     }
     /// <summary>
     /// We want to create a new chunk
@@ -316,9 +314,9 @@ public class VoxelWorld : MonoBehaviour
         {
             Gizmos.color = Color.green;
             Gizmos.color = Color.red;
-            foreach (var node in octree.nodes)
+            foreach (var node in chunkUpdateRequests)
             {
-                Gizmos.DrawWireCube(node.chunkPosition + new Vector3(node.chunkSize / 2f, node.chunkSize / 2f, node.chunkSize / 2f), new Vector3(node.chunkSize, node.chunkSize, node.chunkSize));
+                Gizmos.DrawWireCube(node.Key.chunkPosition + new Vector3(node.Key.chunkSize / 2f, node.Key.chunkSize / 2f, node.Key.chunkSize / 2f), new Vector3(node.Key.chunkSize, node.Key.chunkSize, node.Key.chunkSize));
             }
             if (chunkUpdateRequests.Count > 0)
             {
@@ -331,12 +329,7 @@ public class VoxelWorld : MonoBehaviour
     private void OnGUI()
     {
         if (!debug) return;
-        GUILayout.BeginVertical("box");
         GUILayout.Label("Nodes in total: " + octree.nodes.Count);
-        GUILayout.Label("Nodes to add: " + octree.toAdd.Count);
-        GUILayout.Label("Chunks generating: " + chunksUpdating.Count);
         GUILayout.Label("Chunk update requests: " + chunkUpdateRequests.Count);
-        GUILayout.Label("Voxel edit requests: " + voxelEditsManager.voxelEditRequestBatches.Count);
-        GUILayout.EndVertical();
     }
 }

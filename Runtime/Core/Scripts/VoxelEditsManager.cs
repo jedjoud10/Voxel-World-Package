@@ -12,14 +12,6 @@ public class VoxelEditsManager
         voxelWorld = _voxelWorld;
         voxelEditRequestBatches = new List<VoxelEditRequestBatch>();
     }
-    //Edit the terrain using a cubic tool
-    public void Edit(VoxelEditRequestBatch voxelEditRequestBatch)
-    {
-        //Create the batch before checking the nodes in the octree
-        voxelEditRequestBatches.Add(voxelEditRequestBatch);
-        //Edit the octree to check what nodes we have to update
-        voxelWorld.octree.CheckNodesToEdit(voxelEditRequestBatch);
-    }
     //Force the optimization of the voxelEditRequestBatches using k-means clustering
     public void ForceOptimize() 
     {
