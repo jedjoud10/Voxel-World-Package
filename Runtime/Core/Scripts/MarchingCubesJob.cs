@@ -5,23 +5,27 @@ using Unity.Jobs;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Burst;
-using static VoxelUtility;
+using Jedjoud.VoxelWorld;
+using static Jedjoud.VoxelWorld.VoxelUtility;
+using static Jedjoud.VoxelWorld.VoxelWorld;
 using static Unity.Mathematics.math;
 /// <summary>
 /// Turns the GPU data into a mesh
 /// </summary>
-[BurstCompile]
-public struct MarchingCubesJob : IJobParallelFor
+namespace Jedjoud.VoxelWorld
 {
-    //Marching cubes variables
-    private const int resolution = VoxelWorld.resolution;
-    public float chunkSize;
-    public float isolevel;    
-    public NativeList<MeshTriangle>.ParallelWriter mcTriangles;
-    [ReadOnly] public NativeArray<Voxel> voxels;
+    [BurstCompile]
+    public struct MarchingCubesJob : IJobParallelFor
+    {
+        //Marching cubes variables
+        private const int resolution = VoxelWorld.resolution;
+        public float chunkSize;
+        public float isolevel;
+        public NativeList<MeshTriangle>.ParallelWriter mcTriangles;
+        [ReadOnly] public NativeArray<Voxel> voxels;
 
-    //Static marching cubes lookup tables variables
-    private static readonly int[] mcTable = new int[4096]{
+        //Static marching cubes lookup tables variables
+        private static readonly int[] mcTable = new int[4096]{
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
      0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
      0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
@@ -278,118 +282,119 @@ public struct MarchingCubesJob : IJobParallelFor
      0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
      0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 ,
     -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };//Triangulation table from https://paulbourke.net/geometry/polygonise/
-    private static readonly int3[] edgesToCorners = new int3[12]
-    {
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
-        new int3(0, 0, 0),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
-        new int3(0, 0, 1),
-        new int3(0, 0, 1),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
-    };
-    private static readonly int3[] edgeToCorners2 = new int3[12]
-    {
-        new int3(0, 0, 0),
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
-        new int3(0, 0, 1),
-        new int3(0, 1, 1),
-        new int3(1, 1, 1),
-        new int3(1, 0, 1),
-        new int3(0, 0, 0),
-        new int3(0, 1, 0),
-        new int3(1, 1, 0),
-        new int3(1, 0, 0),
-    };
-    private static readonly int[] edgesToCornerIndices = new int[12]
-    {
-        resolution,
-        resolution + 1,
-        1,
-        0,
-        resolution * resolution + resolution,
-        resolution * resolution + resolution + 1,
-        resolution * resolution + 1,
-        resolution * resolution,
-        resolution * resolution,
-        resolution * resolution + resolution,
-        resolution * resolution + resolution + 1,
-        resolution * resolution + 1,
-    };
-    private static readonly int[] edgesToCornerIndices2 = new int[12]
-    {
-        0,
-        resolution,
-        resolution + 1,
-        1,
-        resolution * resolution,
-        resolution * resolution + resolution,
-        resolution * resolution + resolution + 1,
-        resolution * resolution + 1,
-        0,
-        resolution,
-        resolution + 1,
-        1,
-    };
-    private static readonly int[] cornerChecks = new int[8]
-    {
-        0,
-        resolution,
-        resolution + 1,
-        1,
-        resolution * resolution,
-        resolution * resolution + resolution,
-        resolution * resolution + resolution + 1,
-        resolution * resolution + 1,
-    };
-    public void Execute(int index)
-    {
-        int3 pos = UnflattenIndex(index, resolution-3);
-        int i = FlattenIndex(pos + math.int3(1, 1, 1), resolution);
-        //Indexing
-        int mcCase = 0;
-        if (voxels[i + 0].density < isolevel) mcCase |= 1;
-        if (voxels[i + resolution].density < isolevel) mcCase |= 2;
-        if (voxels[i + resolution + 1].density < isolevel) mcCase |= 4;
-        if (voxels[i + 1].density < isolevel) mcCase |= 8;
-        if (voxels[i + resolution * resolution].density < isolevel) mcCase |= 16;
-        if (voxels[i + resolution * resolution + resolution].density < isolevel) mcCase |= 32;
-        if (voxels[i + resolution * resolution + resolution + 1].density < isolevel) mcCase |= 64;
-        if (voxels[i + resolution * resolution + 1].density < isolevel) mcCase |= 128;
-        //Every triangle in this marching cubes case
-        for (int t = 0; t < 15; t+=3)
+        private static readonly int3[] edgesToCorners = new int3[12]
         {
-            int triBase = mcTable[mcCase * 16 + t];
-            MeshTriangle triangle = new MeshTriangle();
-            if (triBase != -1)
+        new int3(0, 1, 0),
+        new int3(1, 1, 0),
+        new int3(1, 0, 0),
+        new int3(0, 0, 0),
+        new int3(0, 1, 1),
+        new int3(1, 1, 1),
+        new int3(1, 0, 1),
+        new int3(0, 0, 1),
+        new int3(0, 0, 1),
+        new int3(0, 1, 1),
+        new int3(1, 1, 1),
+        new int3(1, 0, 1),
+        };
+        private static readonly int3[] edgeToCorners2 = new int3[12]
+        {
+        new int3(0, 0, 0),
+        new int3(0, 1, 0),
+        new int3(1, 1, 0),
+        new int3(1, 0, 0),
+        new int3(0, 0, 1),
+        new int3(0, 1, 1),
+        new int3(1, 1, 1),
+        new int3(1, 0, 1),
+        new int3(0, 0, 0),
+        new int3(0, 1, 0),
+        new int3(1, 1, 0),
+        new int3(1, 0, 0),
+        };
+        private static readonly int[] edgesToCornerIndices = new int[12]
+        {
+        resolution,
+        resolution + 1,
+        1,
+        0,
+        resolution * resolution + resolution,
+        resolution * resolution + resolution + 1,
+        resolution * resolution + 1,
+        resolution * resolution,
+        resolution * resolution,
+        resolution * resolution + resolution,
+        resolution * resolution + resolution + 1,
+        resolution * resolution + 1,
+        };
+        private static readonly int[] edgesToCornerIndices2 = new int[12]
+        {
+        0,
+        resolution,
+        resolution + 1,
+        1,
+        resolution * resolution,
+        resolution * resolution + resolution,
+        resolution * resolution + resolution + 1,
+        resolution * resolution + 1,
+        0,
+        resolution,
+        resolution + 1,
+        1,
+        };
+        private static readonly int[] cornerChecks = new int[8]
+        {
+        0,
+        resolution,
+        resolution + 1,
+        1,
+        resolution * resolution,
+        resolution * resolution + resolution,
+        resolution * resolution + resolution + 1,
+        resolution * resolution + 1,
+        };
+        public void Execute(int index)
+        {
+            int3 pos = UnflattenIndex(index, resolution - 3);
+            int i = FlattenIndex(pos + math.int3(1, 1, 1), resolution);
+            //Indexing
+            int mcCase = 0;
+            if (voxels[i + 0].density < isolevel) mcCase |= 1;
+            if (voxels[i + resolution].density < isolevel) mcCase |= 2;
+            if (voxels[i + resolution + 1].density < isolevel) mcCase |= 4;
+            if (voxels[i + 1].density < isolevel) mcCase |= 8;
+            if (voxels[i + resolution * resolution].density < isolevel) mcCase |= 16;
+            if (voxels[i + resolution * resolution + resolution].density < isolevel) mcCase |= 32;
+            if (voxels[i + resolution * resolution + resolution + 1].density < isolevel) mcCase |= 64;
+            if (voxels[i + resolution * resolution + 1].density < isolevel) mcCase |= 128;
+            //Every triangle in this marching cubes case
+            for (int t = 0; t < 15; t += 3)
             {
-                for (int h = 0; h < 3; h++)
+                int triBase = mcTable[mcCase * 16 + t];
+                MeshTriangle triangle = new MeshTriangle();
+                if (triBase != -1)
                 {
-                    int tri = mcTable[mcCase * 16 + t + h];
-
-                    //Find the zero-crossing point
-                    float lerpValue = unlerp(voxels[i + edgesToCornerIndices[tri]].density, voxels[i + edgesToCornerIndices2[tri]].density, isolevel);
-                    float3 vertex = (lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
-                    
-                    Voxel a = voxels[i + edgesToCornerIndices[tri]];
-                    Voxel b = voxels[i + edgesToCornerIndices2[tri]];
-
-                    triangle[h] = new MeshVertex()
+                    for (int h = 0; h < 3; h++)
                     {
-                        position = vertex,
-                        color = lerp(a.color, b.color, lerpValue),
-                        normal = lerp(a.normal, b.normal, lerpValue),
-                        uv = lerp(a.sm, b.sm, lerpValue)
-                    };
+                        int tri = mcTable[mcCase * 16 + t + h];
+
+                        //Find the zero-crossing point
+                        float lerpValue = unlerp(voxels[i + edgesToCornerIndices[tri]].density, voxels[i + edgesToCornerIndices2[tri]].density, isolevel);
+                        float3 vertex = (lerp(edgesToCorners[tri], edgeToCorners2[tri], lerpValue) + pos) * (chunkSize / (float)(resolution - 3));
+
+                        Voxel a = voxels[i + edgesToCornerIndices[tri]];
+                        Voxel b = voxels[i + edgesToCornerIndices2[tri]];
+
+                        triangle[h] = new MeshVertex()
+                        {
+                            position = vertex,
+                            color = lerp(a.color, b.color, lerpValue),
+                            normal = lerp(a.normal, b.normal, lerpValue),
+                            uv = lerp(a.sm, b.sm, lerpValue)
+                        };
+                    }
+                    mcTriangles.AddNoResize(triangle);
                 }
-                mcTriangles.AddNoResize(triangle);
             }
         }
     }

@@ -22,7 +22,7 @@ ColorSmoothnessMetallic GetCSM(float3 p, float3 lp, float3 n)
     return csm;
 }
 //This is ran for every intersecting edge in the volume, allows us to place any voxel detail on the surface
-void PlaceVoxelDetailEdge(float3 sp, float3 lp, float3 sn)
+void PlaceVoxelDetailEdge(float3 sp, float3 sn)
 {
     if (hash13(sp) > 0.9)
     {

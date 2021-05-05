@@ -10,7 +10,10 @@ GameObject:
   m_Component:
   - component: {fileID: 3723596104132374919}
   - component: {fileID: 3870815016133413301}
+  - component: {fileID: 5349954861651148282}
+  - component: {fileID: 6324767839862154451}
   - component: {fileID: 6350273776603192351}
+  - component: {fileID: 550303976440052358}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
@@ -44,19 +47,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9f44b12be946f3f469c26a6dcbbbc42d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  debug: 0
   chunkPrefab: {fileID: 5546318451403290407, guid: 57dd4a45fa331ab4d9747360274ea1f2, type: 3}
-  lowpoly: 0
-  normalMaterial: {fileID: 2100000, guid: 00fb06b880ec0e644a27b47e64b3c3e7, type: 2}
-  lowpolyMaterial: {fileID: 2100000, guid: 4aff7ef2ddbd0a5489db2d032acdb276, type: 2}
-  targetFrameDelay: 5
-  details: []
-  maxHierarchyIndex: 3
-  LODBias: 0
-  generationShader: {fileID: 7200000, guid: 3a8af492c575b3d4dab50e60755ebce5, type: 3}
+  chunkManager: {fileID: 0}
+  octreeManager: {fileID: 0}
+  editsManager: {fileID: 0}
+  detailsManager: {fileID: 0}
+--- !u!114 &5349954861651148282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3723596104132374920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba119301254f1ca43912b472ce97ab52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHierarchyIndex: 0
+--- !u!114 &6324767839862154451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3723596104132374920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0257d27e010ab0140a3ca82a1f06030e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetFrameDelay: 0
+  material: {fileID: 0}
+  generationShader: {fileID: 0}
   isolevel: 0
   offset: {x: 0, y: 0, z: 0}
-  scale: {x: 1, y: 1, z: 1}
-  voxelDetailsManager: {fileID: 0}
+  scale: {x: 0, y: 0, z: 0}
   generating: 0
 --- !u!114 &6350273776603192351
 MonoBehaviour:
@@ -70,4 +97,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5fc482a8a4e67f4897e0b2fa51a58e2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  generate: 0
   voxelDetailsPrefabs: []
+--- !u!114 &550303976440052358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3723596104132374920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33a6e66ebedd85644a078c6ae59c8f3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -37,9 +37,9 @@ void VoxelFinal(uint3 id : SV_DispatchThreadID)
         float densityX = voxelsBuffer[flt(id + uint3(1, 0, 0))].density;
         float densityY = voxelsBuffer[flt(id + uint3(0, 1, 0))].density;
         float densityZ = voxelsBuffer[flt(id + uint3(0, 0, 1))].density;
-        if (originDensity < 0 ^ densityX < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(1, 0, 0), unlerp(originDensity, densityX, isolevel)) + offset, id / (float)resolution, normal);
-        if (originDensity < 0 ^ densityY < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 1, 0), unlerp(originDensity, densityY, isolevel)) + offset, id / (float)resolution, normal);
-        if (originDensity < 0 ^ densityZ < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 0, 1), unlerp(originDensity, densityZ, isolevel)) + offset, id / (float)resolution, normal);
+        if (originDensity < 0 ^ densityX < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(1, 0, 0), unlerp(originDensity, densityX, isolevel)) + offset - generationOffset, normal);
+        if (originDensity < 0 ^ densityY < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 1, 0), unlerp(originDensity, densityY, isolevel)) + offset - generationOffset, normal);
+        if (originDensity < 0 ^ densityZ < 0) PlaceVoxelDetailEdge(lerp(id, id + uint3(0, 0, 1), unlerp(originDensity, densityZ, isolevel)) + offset - generationOffset, normal);
     }
     voxelsBuffer[index] = voxel;
 }

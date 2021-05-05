@@ -1,27 +1,31 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static VoxelUtility;
+using Jedjoud.VoxelWorld;
+using static Jedjoud.VoxelWorld.VoxelUtility;
+using static Jedjoud.VoxelWorld.VoxelWorld;
 /// <summary>
 /// Manages the spawning of VoxelDetails
 /// </summary>
 public class VoxelDetailsManager : MonoBehaviour
 {
-    //Main variables
+    //Main detail vars
     public bool generate;
     public GameObject[] voxelDetailsPrefabs;
     public VoxelDetail[] voxelDetails = new VoxelDetail[0];
     public ComputeBuffer detailsBuffer, countBuffer;
     private VoxelWorld voxelWorld;
+
     /// <summary>
-    /// Called from the VoxelWorld to setup the computeBuffers
+    /// Initialize this details manager
     /// </summary>
-    public void Setup(VoxelWorld voxelWorld) 
+    public VoxelDetailsManager Setup(VoxelWorld voxelWorld) 
     {
         this.voxelWorld = voxelWorld;
         detailsBuffer = new ComputeBuffer((VoxelWorld.resolution-3) * (VoxelWorld.resolution-3) * (VoxelWorld.resolution-3), sizeof(float) * 8, ComputeBufferType.Append);
         countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
-        voxelWorld.generationShader.SetBuffer(1, "detailsBuffer", detailsBuffer);
+        voxelWorld.chunkManager.generationShader.SetBuffer(1, "detailsBuffer", detailsBuffer);
+        return this;
     }
 
     /// <summary>
@@ -56,9 +60,9 @@ public class VoxelDetailsManager : MonoBehaviour
         detailsBuffer.GetData(voxelDetails);
     }
 
+    //Release everything
     private void OnDestroy()
     {
-        //Release everything
         detailsBuffer.Release();
         countBuffer.Release();
     }

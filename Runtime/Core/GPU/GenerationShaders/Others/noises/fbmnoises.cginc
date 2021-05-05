@@ -1,5 +1,5 @@
 //FbM functions
-float fbmSnoise(float3 p, float pe, float la, float o)
+float fBmSnoise(float3 p, float pe, float la, float o)
 {
     float noiseDensity = 0;
     float maxNoiseDensity = 0;
@@ -10,7 +10,7 @@ float fbmSnoise(float3 p, float pe, float la, float o)
     }
     return noiseDensity / maxNoiseDensity;
 }
-float fbmRidge(float3 p, float pe, float la, float o)
+float fBmRidge(float3 p, float pe, float la, float o)
 {
     float noiseDensity = 0;
     float maxNoiseDensity = 0;
@@ -23,7 +23,7 @@ float fbmRidge(float3 p, float pe, float la, float o)
     }
     return noiseDensity / maxNoiseDensity;
 }
-float fbmCellular(float3 p, float pe, float la, float o)
+float fBmCellular(float3 p, float pe, float la, float o)
 {
     float noiseDensity = 0;
     float maxNoiseDensity = 0;

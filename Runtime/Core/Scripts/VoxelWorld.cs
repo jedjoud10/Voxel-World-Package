@@ -2,334 +2,113 @@ using System.Collections;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Threading;
 using System.Linq;
-using UnityEngine.Rendering;
 using Unity.Jobs;
 using Unity.Collections;
-using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
-using static VoxelUtility;
-using Unity.Mathematics;
+using Jedjoud.VoxelWorld;
+using static Jedjoud.VoxelWorld.VoxelUtility;
+using static Jedjoud.VoxelWorld.VoxelWorld;
+using static Unity.Mathematics.math;
 /// <summary>
 /// The whole class handling the creation/generation/removal of chunks
 /// </summary>
-public class VoxelWorld : MonoBehaviour
+namespace Jedjoud.VoxelWorld
 {
-    //Main settings
-    [Header("Main Settings")]
-    public bool debug;
-    public GameObject chunkPrefab;
-    public bool lowpoly;
-    public Material material;
-    [Range(0, 5)]
-    public int targetFrameDelay = 5;
-
-    [Header("Octree options")]
-    [Range(1, 24)]
-    public int maxHierarchyIndex;
-    public float LODBias;
-
-    [Header("Generation Settings")]
-    public ComputeShader generationShader;
-    public float isolevel;
-    public Vector3 offset, scale;
-
-    //Other stuff
-    #region Some hellish fire bellow
-    public Dictionary<OctreeNode, ChunkUpdateRequest> chunkUpdateRequests;
-    public HashSet<Chunk> chunksUpdating;
-    public Dictionary<OctreeNode, Chunk> chunks;
-    public OctreeManager octree;
-    [HideInInspector]
-    public VoxelEditsManager voxelEditsManager;
-    [HideInInspector]
-    public VoxelDetailsManager voxelDetailsManager;
-    [HideInInspector]
-    public bool generating;
-    private bool finishedStartGeneration = false, tempStartGeneration = false;
-    public event Action OnVoxelWorldFinishedGeneration;
-    public CameraData camData, lastFrameCamData;
-
-    //GPU-CPU Stuff
-    private ComputeBuffer voxelsBuffer;
-    private Voxel[] voxels = new Voxel[resolution * resolution * resolution];    
-    private NativeArray<Voxel> nativeVoxels;
-    private NativeList<MeshTriangle> mcTriangles;
-    private NativeList<int> triangles;
-    private NativeList<float3> vertices, normals;
-    private NativeList<float4> colors;
-    private NativeList<float2> uvs;
-
-    //Constant settings
-    public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
-    public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
-    public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
-
-
-    //Job system stuff
-    private JobHandle vertexMergingHandle;
-    private Chunk currentChunk;
-    private bool completed = true;
-    private int frameCountSinceLast;
-    #endregion
-    // Start is called before the first frame update
-    void Start()
+    public class VoxelWorld : MonoBehaviour
     {
-        //Initialize everything
-        octree = new OctreeManager(this);
-        voxelEditsManager = new VoxelEditsManager(this);
-        voxelDetailsManager = GetComponent<VoxelDetailsManager>();
-        voxelDetailsManager.Setup(this);
-        chunks = new Dictionary<OctreeNode, Chunk>();
-        chunkUpdateRequests = new Dictionary<OctreeNode, ChunkUpdateRequest>();
-        chunksUpdating = new HashSet<Chunk>();
+        //Main settings
+        [Header("Main Settings")]
+        public bool debug;
+        public GameObject chunkPrefab;
 
-        //Setup first time compute shader stuff        
-        generationShader.SetInt("resolution", resolution);
-        generationShader.SetVector("scale", scale);
-        generationShader.SetFloat("isolevel", isolevel);
+        //Other stuff
+        #region Some hellish fire bellow    
+        public VoxelChunkManager chunkManager;
+        public VoxelOctreeManager octreeManager;
+        public VoxelEditsManager editsManager;
+        public VoxelDetailsManager detailsManager;
+        public CameraData camData, lastFrameCamData;
 
-        voxelsBuffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
+        //Constant settings
+        public const float voxelSize = 1f;//The voxel size in meters (Ex. 0.001 voxelSize is one centimeter voxel size)
+        public const int resolution = 32;//The resolution of each chunk> Can either be 8-16-32-64
+        public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
+        #endregion
 
-        generationShader.SetBuffer(0, "voxelsBuffer", voxelsBuffer);
-        generationShader.SetBuffer(1, "voxelsBuffer", voxelsBuffer);
-
-        //Cpu Job system allocations
-        nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
-        mcTriangles = new NativeList<MeshTriangle>((resolution - 3) * (resolution - 3) * (resolution - 3) * 5 + (6 * resolution * resolution * 2), Allocator.Persistent);
-        vertices = new NativeList<float3>(mcTriangles.Capacity * 3, Allocator.Persistent);
-        normals = new NativeList<float3>(mcTriangles.Capacity * 3, Allocator.Persistent);
-        colors = new NativeList<float4>(mcTriangles.Capacity * 3, Allocator.Persistent);
-        uvs = new NativeList<float2>(mcTriangles.Capacity * 3, Allocator.Persistent);
-        triangles = new NativeList<int>(mcTriangles.Capacity * 3, Allocator.Persistent);
-    }
-    // Called when this gameObject gets destroyed
-    private void OnDestroy()
-    {
-        //Release everything
-        vertexMergingHandle.Complete();
-        voxelsBuffer.Release();
-        nativeVoxels.Dispose();
-        mcTriangles.Dispose();
-        triangles.Dispose();
-        vertices.Dispose();
-        colors.Dispose();
-        uvs.Dispose();
-        normals.Dispose();
-    }
-    // Update is called once per frame
-    void Update()
-    {
-        generating = chunkUpdateRequests.Count > 0 || octree.toAdd.Count > 0 || octree.toRemove.Count > 0 || chunksUpdating.Count > 0;
-
-        //Update the octree
-        if (!generating && Time.frameCount % 20 == 0 || !camData.Equals(lastFrameCamData)) octree.UpdateOctree(camData);
-
-        //Generate a single mesh
-        if (chunkUpdateRequests.Count > 0 && completed)
+        // Start is called before the first frame update
+        void Start()
         {
-            KeyValuePair<OctreeNode, ChunkUpdateRequest> request = chunkUpdateRequests.First();
-            GenerateMesh(request.Value.chunk, request.Key);
-            chunkUpdateRequests.Remove(request.Key);
-            frameCountSinceLast = 0;
+            SetupReferences();
+            chunkManager.OnGenerateNewChunk += OnGenerateNewChunk;
+            chunkManager.OnFinishedGeneration += OnFinishedGeneration;
         }
-        
-        //Create the chunks
-        if (octree.toAdd.Count > 0)
+
+        /// <summary>
+        /// Setup the references for all the managers that are connected to this voxel world
+        /// </summary>
+        public void SetupReferences()
         {
-            tempStartGeneration = true;
-            for (int i = 0; i < 16; i++)
+            //Initialize everything
+            octreeManager.Setup(this);
+            editsManager.Setup(this);
+            chunkManager.Setup(this);
+            detailsManager.Setup(this);
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            //Update the ChunkManager
+            chunkManager.UpdateChunkManager();
+
+            //Update the octree
+            if (!chunkManager.generating && Time.frameCount % 20 == 0 || !camData.Equals(lastFrameCamData)) octreeManager.UpdateOctree(camData);
+        }
+
+        //----Callbacks----\\
+        private void OnGenerateNewChunk(Chunk chunk, OctreeNode node)
+        {
+        }
+        private void OnFinishedGeneration()
+        {
+        }
+
+        /// <summary>
+        /// We want to unsubscribe from the callbacks
+        /// </summary>
+        void OnDestroy()
+        {
+            chunkManager.OnGenerateNewChunk -= OnGenerateNewChunk;
+            chunkManager.OnFinishedGeneration -= OnFinishedGeneration;
+        }
+
+        /// <summary>
+        /// Draw some gizmos
+        /// </summary>
+        private void OnDrawGizmos()
+        {
+            if (!debug) return;
+            if (octreeManager != null)
             {
-                if (octree.toAdd.Count > 0)
+                Gizmos.color = Color.green;
+                Gizmos.color = Color.red;
+                foreach (var node in chunkManager.chunkUpdateRequests)
                 {
-                    if (!chunks.ContainsKey(octree.toAdd[0]))
-                    {
-                        if (octree.toAdd[0].isLeaf)
-                        {
-                            Chunk chunk = CreateNewChunk(octree.toAdd[0]);
-                            chunks.Add(octree.toAdd[0], chunk);
-                            chunksUpdating.Add(chunk);
-                        }
-                    }
-                    octree.toAdd.RemoveAt(0);
+                    Gizmos.DrawWireCube(node.Key.chunkPosition + new Vector3(node.Key.chunkSize / 2f, node.Key.chunkSize / 2f, node.Key.chunkSize / 2f), new Vector3(node.Key.chunkSize, node.Key.chunkSize, node.Key.chunkSize));
                 }
-            }
-        }
-        //Remove the chunks
-        if (octree.toRemove.Count > 0)
-        {
-            for (int i = 0; i < 128; i++)
-            {
-                if (octree.toRemove.Count > 0 && chunkUpdateRequests.Count == 0 && chunksUpdating.Count == 0)
-                {
-                    OctreeNode nodeToRemove = octree.toRemove[octree.toRemove.Count - 1];
-                    if (chunks.ContainsKey(nodeToRemove))
-                    {
-                        if (chunks[nodeToRemove].chunkGameObject != null) Destroy(chunks[nodeToRemove].chunkGameObject);
-                        //RemoveChunkRequest(octree.toRemove[0]);
-                        //Remove from the chunks array
-                        chunks.Remove(nodeToRemove);
-                        //Dequeue from the octree list
-                    }
-                    octree.toRemove.RemoveAt(octree.toRemove.Count - 1);
-                }
+                //Gizmos.DrawWireCube(octree.toRemove[index].center, new Vector3(octree.toRemove[index].size, octree.toRemove[index].size, octree.toRemove[index].size));
             }
         }
 
-        //Complete the job after a small delay, or no delay at all
-        if (!completed && (vertexMergingHandle.IsCompleted && frameCountSinceLast > targetFrameDelay))
+        /// <summary>
+        /// Some debugging
+        /// </summary>
+        private void OnGUI()
         {
-            vertexMergingHandle.Complete();
-            completed = true;
-
-            //Create the mesh and update it
-            Mesh mesh = new Mesh();
-            mesh.SetVertices(vertices.AsArray());
-            mesh.SetNormals(normals.AsArray());
-            mesh.SetUVs(0, uvs.AsArray());
-            mesh.SetColors(colors.AsArray());
-            mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
-            chunksUpdating.Remove(currentChunk);
-            if (vertices.Length == 0)
-            {
-                Destroy(currentChunk.chunkGameObject);
-            }
-            voxelDetailsManager.InstantiateVoxelDetails(currentChunk);
-            currentChunk.chunkGameObject.GetComponent<MeshRenderer>().material = material;
-            currentChunk.chunkGameObject.GetComponent<MeshFilter>().sharedMesh = mesh;
-            currentChunk.chunkGameObject.GetComponent<MeshCollider>().sharedMesh = mesh;
+            if (!debug) return;
+            GUILayout.Label("Nodes in total: " + octreeManager.nodes.Count);
+            GUILayout.Label("Chunk update requests: " + chunkManager.chunkUpdateRequests.Count);
         }
-
-        frameCountSinceLast++;
-        //When the terrain finishes generation for the first time
-        if (tempStartGeneration && octree.toAdd.Count == 0 && chunksUpdating.Count == 0 && chunkUpdateRequests.Count == 0 && !finishedStartGeneration)
-        {
-            finishedStartGeneration = true;
-            OnVoxelWorldFinishedGeneration?.Invoke();
-        }
-        lastFrameCamData = camData;
-    }
-    /// <summary>
-    /// We want to create a new chunk
-    /// </summary>
-    public Chunk CreateNewChunk(OctreeNode octreeNode)
-    {
-        //return;return newChunk;
-        //Don't create a new chunk request when it already exists    
-        if (!chunkUpdateRequests.ContainsKey(octreeNode))
-        {
-            Chunk newChunk;
-
-            GameObject chunkGameObject = Instantiate(chunkPrefab, octreeNode.chunkPosition, Quaternion.identity);
-            chunkGameObject.transform.parent = transform;
-
-            newChunk.chunkGameObject = chunkGameObject;
-            newChunk.octreeNodeSize = octreeNode.size;
-            newChunk.position = octreeNode.chunkPosition;
-            chunkUpdateRequests.Add(octreeNode, new ChunkUpdateRequest() { chunk = newChunk, priority = octreeNode.hierarchyIndex });
-            return newChunk;
-        }
-        else
-        {
-            Chunk newChunk = chunkUpdateRequests[octreeNode].chunk;
-            newChunk.octreeNodeSize = octreeNode.size;
-            newChunk.position = octreeNode.chunkPosition;
-            chunkUpdateRequests.Remove(octreeNode);
-            chunkUpdateRequests.Add(octreeNode, new ChunkUpdateRequest() { chunk = newChunk, priority = octreeNode.hierarchyIndex });
-            return newChunk;
-        }
-    }    
-    
-    /// <summary>
-    /// Generate the mesh for a specific chunk
-    /// </summary>
-    public void GenerateMesh(Chunk chunk, OctreeNode node)
-    {
-        //1. Generate the data (density, rgb color, roughness, metallic) for the meshing
-        Vector3 chunkOffset = new Vector3(node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3), node.chunkSize / ((float)resolution - 3));
-        voxelDetailsManager.ResetBufferCount();    
-        generationShader.SetVector("offset", offset + node.chunkPosition - chunkOffset);
-        generationShader.SetFloat("chunkScaling", node.chunkSize / (float)(resolution - 3));
-        generationShader.SetFloat("quality", Mathf.Pow((float)node.hierarchyIndex / (float)maxHierarchyIndex, 0.2f));
-        generationShader.Dispatch(0, resolution / 8, resolution / 8, resolution / 8);
-        generationShader.Dispatch(1, resolution / 8, resolution / 8, resolution / 8);
-        voxelsBuffer.GetData(voxels);
-
-        voxelDetailsManager.GetDataFromBuffer(chunk, node);
-
-        nativeVoxels.CopyFrom(voxels);
-        triangles.Clear();
-        mcTriangles.Clear();
-        vertices.Clear();
-        normals.Clear();
-        colors.Clear();
-        uvs.Clear();
-
-        //Job system
-        MarchingCubesJob mcjob = new MarchingCubesJob()
-        {
-            chunkSize = node.chunkSize,
-            isolevel = isolevel,
-            mcTriangles = mcTriangles.AsParallelWriter(),
-            voxels = nativeVoxels
-        };
-        //Skirts
-        SkirtsJob skirtsJob = new SkirtsJob()
-        {
-            chunkSize = node.chunkSize,
-            isolevel = isolevel,
-            reductionFactorChunkScaled = (node.chunkSize / (float)(resolution - 3)),
-            mcTriangles = mcTriangles.AsParallelWriter(),
-            voxels = nativeVoxels
-        };
-
-        VertexMergingJob vmJob = new VertexMergingJob()
-        {
-            lowpoly = lowpoly,
-            mcTriangles = mcTriangles,
-            vertices = vertices,
-            normals = normals,
-            colors = colors,
-            uvs = uvs,
-            triangles = triangles,
-        };
-
-        JobHandle marchingCubesHandle = mcjob.Schedule((resolution - 3) * (resolution - 3) * (resolution - 3), 128);
-        //marchingCubesHandle.Complete();
-
-        JobHandle skirtsHandle = skirtsJob.Schedule((resolution - 3) * (resolution - 3) * 6, 128, marchingCubesHandle);
-
-        vertexMergingHandle = vmJob.Schedule(JobHandle.CombineDependencies(skirtsHandle, marchingCubesHandle));
-        currentChunk = chunk;
-        completed = false;       
-    }
-    /// <summary>
-    /// Draw some gizmos
-    /// </summary>
-    private void OnDrawGizmos()
-    {
-        if (!debug) return;
-        if (octree != null)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.color = Color.red;
-            foreach (var node in chunkUpdateRequests)
-            {
-                Gizmos.DrawWireCube(node.Key.chunkPosition + new Vector3(node.Key.chunkSize / 2f, node.Key.chunkSize / 2f, node.Key.chunkSize / 2f), new Vector3(node.Key.chunkSize, node.Key.chunkSize, node.Key.chunkSize));
-            }
-            if (chunkUpdateRequests.Count > 0)
-            {
-                Gizmos.DrawWireCube(chunkUpdateRequests.First().Key.chunkPosition + new Vector3(chunkUpdateRequests.First().Key.chunkSize / 2f, chunkUpdateRequests.First().Key.chunkSize / 2f, chunkUpdateRequests.First().Key.chunkSize / 2f), new Vector3(chunkUpdateRequests.First().Key.chunkSize, chunkUpdateRequests.First().Key.chunkSize, chunkUpdateRequests.First().Key.chunkSize));
-            }
-            //Gizmos.DrawWireCube(octree.toRemove[index].center, new Vector3(octree.toRemove[index].size, octree.toRemove[index].size, octree.toRemove[index].size));
-        }
-    }
-    //Show some debug info
-    private void OnGUI()
-    {
-        if (!debug) return;
-        GUILayout.Label("Nodes in total: " + octree.nodes.Count);
-        GUILayout.Label("Chunk update requests: " + chunkUpdateRequests.Count);
     }
 }

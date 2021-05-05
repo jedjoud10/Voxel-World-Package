@@ -27,6 +27,7 @@ float seedHash;
 
 
 //Base values
+float3 generationOffset;
 float3 offset;
 float3 scale;
 float chunkScaling;
