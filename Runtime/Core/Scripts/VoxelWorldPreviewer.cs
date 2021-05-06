@@ -25,6 +25,7 @@ namespace Jedjoud.VoxelWorld
         {
             base.Setup(voxelWorld);
             previewTexture = new RenderTexture(VoxelWorld.resolution, VoxelWorld.resolution, 8);
+            previewTexture.enableRandomWrite = true;
             previewTexture.Create();
             //Gotta do this to avoid errors
             voxelWorld.chunkManager.generationShader.SetTexture(0, "previewTexture", previewTexture);

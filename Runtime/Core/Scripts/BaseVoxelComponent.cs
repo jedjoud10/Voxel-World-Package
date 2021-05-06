@@ -17,6 +17,7 @@ namespace Jedjoud.VoxelWorld
         /// </summary>
         public virtual void Setup(VoxelWorld voxelWorld) 
         {
+            Debug.Log($"Setup {this.name} voxel component!");
             this.voxelWorld = voxelWorld;
         }
 

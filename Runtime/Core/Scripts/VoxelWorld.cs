@@ -10,11 +10,13 @@ using Jedjoud.VoxelWorld;
 using static Jedjoud.VoxelWorld.VoxelUtility;
 using static Jedjoud.VoxelWorld.VoxelWorld;
 using static Unity.Mathematics.math;
-/// <summary>
-/// The whole class handling the creation/generation/removal of chunks
-/// </summary>
+
 namespace Jedjoud.VoxelWorld
 {
+    /// <summary>
+    /// The whole class handling the creation/generation/removal of chunks
+    /// </summary>
+    [ExecuteInEditMode]
     public class VoxelWorld : MonoBehaviour
     {
         //Main settings
@@ -37,8 +39,8 @@ namespace Jedjoud.VoxelWorld
         public const float reducingFactor = ((float)(VoxelWorld.resolution - 3) / (float)(VoxelWorld.resolution));
         #endregion
 
-        // Start is called before the first frame update
-        void Start()
+        
+        void Awake()
         {
             SetupReferences();
             chunkManager.OnGenerateNewChunk += OnGenerateNewChunk;

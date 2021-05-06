@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using Jedjoud.VoxelWorld;
 [CustomEditor(typeof(VoxelOctreeManager))]
-public class CustomEditorVoxelWorld : Editor
+public class CustomEditorVoxelOctree : Editor
 {
     public override void OnInspectorGUI()
     {
