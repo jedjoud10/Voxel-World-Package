@@ -13,6 +13,13 @@ void VoxelMain(uint3 id : SV_DispatchThreadID)
     voxelsBuffer[(id.z * resolution * resolution) + (id.y * resolution) + id.x] = voxel;
 }
 
+[numthreads(8, 1, 8)]
+void PreviewMain(uint3 id : SV_DispatchThreadID)
+{
+    float3 p = (id * chunkScaling + offset) * scale;
+    previewTexture[id.xz] = Density(p, id / (float)resolution);
+}
+
 float unlerp(float a, float b, float t) { return (t - a) / (b - a); }
 
 [numthreads(8, 8, 8)]

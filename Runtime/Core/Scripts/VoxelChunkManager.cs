@@ -10,11 +10,12 @@ using Jedjoud.VoxelWorld;
 using static Jedjoud.VoxelWorld.VoxelUtility;
 using static Jedjoud.VoxelWorld.VoxelWorld;
 using Unity.Mathematics;
-/// <summary>
-/// Chunk manager class
-/// </summary>
+
 namespace Jedjoud.VoxelWorld
 {
+    /// <summary>
+    /// Chunk manager class
+    /// </summary>
     public class VoxelChunkManager : MonoBehaviour
     {
         //Unity Inspector vars
@@ -23,7 +24,8 @@ namespace Jedjoud.VoxelWorld
         public Material material;
         public ComputeShader generationShader;
         public float isolevel;
-        public Vector3 offset, scale;
+        public Vector3 offset;
+        public Vector3 scale = Vector3.one;
 
         //Main chunk manager vars
         private VoxelWorld voxelWorld;
@@ -59,7 +61,7 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Initialize this chunk manager
         /// </summary>
-        public VoxelChunkManager Setup(VoxelWorld voxelWorld)
+        public void Setup(VoxelWorld voxelWorld)
         {
             this.voxelWorld = voxelWorld;
             //Setup first time compute shader stuff
@@ -83,7 +85,6 @@ namespace Jedjoud.VoxelWorld
             colors = new NativeList<float4>(mcTriangles.Capacity * 3, Allocator.Persistent);
             uvs = new NativeList<float2>(mcTriangles.Capacity * 3, Allocator.Persistent);
             triangles = new NativeList<int>(mcTriangles.Capacity * 3, Allocator.Persistent);
-            return this;
         }
 
         /// <summary>

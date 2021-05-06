@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using Jedjoud.VoxelWorld;
-[CustomEditor(typeof(VoxelWorld))]
+[CustomEditor(typeof(VoxelOctreeManager))]
 public class CustomEditorVoxelWorld : Editor
 {
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
-        VoxelWorld voxelWorld = (VoxelWorld)target;
+        VoxelOctreeManager octreeManager = (VoxelOctreeManager)target;
 
         //Caclulate the globalWorldSize
-        float globalWorldSize = Mathf.Pow(2, voxelWorld.octreeManager.maxHierarchyIndex) * (VoxelWorld.resolution-3) * VoxelWorld.voxelSize;
+        float globalWorldSize = Mathf.Pow(2, octreeManager.maxHierarchyIndex) * (VoxelWorld.resolution-3) * VoxelWorld.voxelSize;
         string sign = "m";
         //When the terrain is in km
         if (globalWorldSize > 1000)
@@ -21,7 +21,6 @@ public class CustomEditorVoxelWorld : Editor
             sign = "km";
         }
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Other", EditorStyles.boldLabel);
         EditorGUILayout.LabelField("Global World Size: " + globalWorldSize + sign);
     }
 }

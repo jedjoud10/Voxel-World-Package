@@ -29,14 +29,13 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Initialize this octree manager
         /// </summary>
-        public VoxelOctreeManager Setup(VoxelWorld voxelWorld)
+        public void Setup(VoxelWorld voxelWorld)
         {
             this.voxelWorld = voxelWorld;
             nodes = new List<OctreeNode>();
             toAdd = new List<OctreeNode>();
             toRemove = new List<OctreeNode>();
             nodesChildrenCarrier = new Dictionary<OctreeNode, OctreeNodeChildrenCarrier>();
-            return this;
         }
 
         /// <summary>

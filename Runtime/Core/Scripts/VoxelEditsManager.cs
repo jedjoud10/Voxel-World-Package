@@ -1,14 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Jedjoud.VoxelWorld;
 using static Jedjoud.VoxelWorld.VoxelUtility;
 using static Jedjoud.VoxelWorld.VoxelWorld;
-/// <summary>
-/// Manages and optimizes voxel edits
-/// </summary>
+using static Unity.Mathematics.math;
+
 namespace Jedjoud.VoxelWorld
 {
+    /// <summary>
+    /// Manages and optimizes voxel edits
+    /// </summary>
     public class VoxelEditsManager : MonoBehaviour
     {
         private VoxelWorld voxelWorld;
@@ -17,11 +18,10 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Initialize this edits manager
         /// </summary>
-        public VoxelEditsManager Setup(VoxelWorld voxelWorld)
+        public void Setup(VoxelWorld voxelWorld)
         {
             this.voxelWorld = voxelWorld;
             voxelEditRequestBatches = new List<VoxelEditRequestBatch>();
-            return this;
         }
 
         //Force the optimization of the voxelEditRequestBatches using k-means clustering

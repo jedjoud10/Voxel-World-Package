@@ -24,10 +24,10 @@ namespace Jedjoud.VoxelWorld
 
         //Other stuff
         #region Some hellish fire bellow    
-        public VoxelChunkManager chunkManager;
         public VoxelOctreeManager octreeManager;
-        public VoxelEditsManager editsManager;
+        public VoxelChunkManager chunkManager;
         public VoxelDetailsManager detailsManager;
+        public VoxelEditsManager editsManager;
         public CameraData camData, lastFrameCamData;
 
         //Constant settings
