@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Jedjoud.VoxelWorld;
 using static Jedjoud.VoxelWorld.VoxelUtility;
 using static Jedjoud.VoxelWorld.VoxelWorld;
 using static Unity.Mathematics.math;
@@ -10,21 +11,20 @@ namespace Jedjoud.VoxelWorld
     /// <summary>
     /// Manages the spawning of VoxelDetails
     /// </summary>
-    public class VoxelDetailsManager : MonoBehaviour
+    public class VoxelDetailsManager : BaseVoxelComponent
     {
         //Main detail vars
         public bool generate;
         public GameObject[] voxelDetailsPrefabs;
         public VoxelDetail[] voxelDetails = new VoxelDetail[0];
         public ComputeBuffer detailsBuffer, countBuffer;
-        private VoxelWorld voxelWorld;
 
         /// <summary>
         /// Initialize this details manager
         /// </summary>
-        public void Setup(VoxelWorld voxelWorld)
+        public override void Setup(VoxelWorld voxelWorld)
         {
-            this.voxelWorld = voxelWorld;
+            base.Setup(voxelWorld);
             detailsBuffer = new ComputeBuffer((VoxelWorld.resolution - 3) * (VoxelWorld.resolution - 3) * (VoxelWorld.resolution - 3), sizeof(float) * 8, ComputeBufferType.Append);
             countBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.IndirectArguments);
             voxelWorld.chunkManager.generationShader.SetBuffer(1, "detailsBuffer", detailsBuffer);
@@ -61,8 +61,10 @@ namespace Jedjoud.VoxelWorld
             detailsBuffer.GetData(voxelDetails);
         }
 
-        //Release everything
-        private void OnDestroy()
+        /// <summary>
+        /// Release everything
+        /// </summary>
+        public override void Release()
         {
             detailsBuffer.Release();
             countBuffer.Release();

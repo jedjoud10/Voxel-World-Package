@@ -57,4 +57,4 @@ struct ColorSmoothnessMetallic
 };
 RWStructuredBuffer<Voxel> voxelsBuffer;
 AppendStructuredBuffer<VoxelDetail> detailsBuffer;
-StructuredBuffer<float> previewTexture;
+RWTexture2D<float> previewTexture;

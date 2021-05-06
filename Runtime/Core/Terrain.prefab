@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 3870815016133413301}
   - component: {fileID: 5349954861651148282}
   - component: {fileID: 6324767839862154451}
-  - component: {fileID: 6350273776603192351}
-  - component: {fileID: 550303976440052358}
   - component: {fileID: 7889936946719086522}
+  - component: {fileID: 7823687094769772598}
+  - component: {fileID: 550303976440052358}
   m_Layer: 0
   m_Name: Terrain
   m_TagString: Untagged
@@ -52,7 +52,7 @@ MonoBehaviour:
   chunkPrefab: {fileID: 5546318451403290407, guid: 57dd4a45fa331ab4d9747360274ea1f2, type: 3}
   octreeManager: {fileID: 5349954861651148282}
   chunkManager: {fileID: 6324767839862154451}
-  detailsManager: {fileID: 0}
+  detailsManager: {fileID: 7823687094769772598}
   editsManager: {fileID: 550303976440052358}
 --- !u!114 &5349954861651148282
 MonoBehaviour:
@@ -86,32 +86,6 @@ MonoBehaviour:
   offset: {x: 0, y: 0, z: 0}
   scale: {x: 0, y: 0, z: 0}
   generating: 0
---- !u!114 &6350273776603192351
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3723596104132374920}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5fc482a8a4e67f4897e0b2fa51a58e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  generate: 0
-  voxelDetailsPrefabs: []
---- !u!114 &550303976440052358
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3723596104132374920}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 33a6e66ebedd85644a078c6ae59c8f3d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &7889936946719086522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -126,3 +100,31 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   previewOffset: {x: 0, y: 0, z: 0}
   previewScale: {x: 1, y: 1, z: 1}
+  previewIsolevel: 0
+--- !u!114 &7823687094769772598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3723596104132374920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e65f2677a480044aaad9192dce0b0c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  generate: 0
+  voxelDetailsPrefabs:
+  - {fileID: 0}
+--- !u!114 &550303976440052358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3723596104132374920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33a6e66ebedd85644a078c6ae59c8f3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

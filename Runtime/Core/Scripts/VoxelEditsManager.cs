@@ -10,17 +10,16 @@ namespace Jedjoud.VoxelWorld
     /// <summary>
     /// Manages and optimizes voxel edits
     /// </summary>
-    public class VoxelEditsManager : MonoBehaviour
+    public class VoxelEditsManager : BaseVoxelComponent
     {
-        private VoxelWorld voxelWorld;
         public List<VoxelEditRequestBatch> voxelEditRequestBatches = new List<VoxelEditRequestBatch>();//Voxel edit requests to edit chunks
 
         /// <summary>
         /// Initialize this edits manager
         /// </summary>
-        public void Setup(VoxelWorld voxelWorld)
+        public override void Setup(VoxelWorld voxelWorld)
         {
-            this.voxelWorld = voxelWorld;
+            base.Setup(voxelWorld);
             voxelEditRequestBatches = new List<VoxelEditRequestBatch>();
         }
 

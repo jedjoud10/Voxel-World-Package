@@ -28,6 +28,7 @@ namespace Jedjoud.VoxelWorld
         public VoxelChunkManager chunkManager;
         public VoxelDetailsManager detailsManager;
         public VoxelEditsManager editsManager;
+        public VoxelWorldPreviewer previewer;
         public CameraData camData, lastFrameCamData;
 
         //Constant settings
@@ -50,6 +51,7 @@ namespace Jedjoud.VoxelWorld
         public void SetupReferences()
         {
             //Initialize everything
+            previewer.Setup(this);
             octreeManager.Setup(this);
             editsManager.Setup(this);
             chunkManager.Setup(this);
@@ -79,6 +81,13 @@ namespace Jedjoud.VoxelWorld
         /// </summary>
         void OnDestroy()
         {
+            //Release everything
+            previewer.Release();
+            octreeManager.Release();
+            editsManager.Release();
+            chunkManager.Release();
+            detailsManager.Release();
+
             chunkManager.OnGenerateNewChunk -= OnGenerateNewChunk;
             chunkManager.OnFinishedGeneration -= OnFinishedGeneration;
         }

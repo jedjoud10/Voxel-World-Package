@@ -12,13 +12,12 @@ using static Jedjoud.VoxelWorld.VoxelWorld;
 /// </summary>
 namespace Jedjoud.VoxelWorld
 {
-    public class VoxelOctreeManager : MonoBehaviour
+    public class VoxelOctreeManager : BaseVoxelComponent
     {
         //Main octree vars
         public List<OctreeNode> nodes;
         public List<OctreeNode> toAdd, toRemove;
         private Dictionary<OctreeNode, OctreeNodeChildrenCarrier> nodesChildrenCarrier;
-        private VoxelWorld voxelWorld;
         [Range(0, 24)]
         public int maxHierarchyIndex;
         private struct OctreeNodeChildrenCarrier
@@ -29,9 +28,9 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Initialize this octree manager
         /// </summary>
-        public void Setup(VoxelWorld voxelWorld)
+        public override void Setup(VoxelWorld voxelWorld)
         {
-            this.voxelWorld = voxelWorld;
+            base.Setup(voxelWorld);
             nodes = new List<OctreeNode>();
             toAdd = new List<OctreeNode>();
             toRemove = new List<OctreeNode>();

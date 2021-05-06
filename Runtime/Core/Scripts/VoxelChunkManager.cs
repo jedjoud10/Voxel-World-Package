@@ -16,7 +16,7 @@ namespace Jedjoud.VoxelWorld
     /// <summary>
     /// Chunk manager class
     /// </summary>
-    public class VoxelChunkManager : MonoBehaviour
+    public class VoxelChunkManager : BaseVoxelComponent
     {
         //Unity Inspector vars
         [Range(0, 5)]
@@ -28,7 +28,6 @@ namespace Jedjoud.VoxelWorld
         public Vector3 scale = Vector3.one;
 
         //Main chunk manager vars
-        private VoxelWorld voxelWorld;
         public Dictionary<OctreeNode, ChunkUpdateRequest> chunkUpdateRequests = new Dictionary<OctreeNode, ChunkUpdateRequest>();
         public HashSet<Chunk> chunksUpdating = new HashSet<Chunk>();
         public Dictionary<OctreeNode, Chunk> chunks = new Dictionary<OctreeNode, Chunk>();
@@ -61,9 +60,9 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Initialize this chunk manager
         /// </summary>
-        public void Setup(VoxelWorld voxelWorld)
+        public override void Setup(VoxelWorld voxelWorld)
         {
-            this.voxelWorld = voxelWorld;
+            base.Setup(voxelWorld);
             //Setup first time compute shader stuff
             voxelsBuffer = new ComputeBuffer((resolution) * (resolution) * (resolution), sizeof(float) * 9);
             chunks = new Dictionary<OctreeNode, Chunk>();
@@ -76,8 +75,7 @@ namespace Jedjoud.VoxelWorld
             generationShader.SetFloat("isolevel", isolevel);
             generationShader.SetBuffer(0, "voxelsBuffer", voxelsBuffer);
             generationShader.SetBuffer(1, "voxelsBuffer", voxelsBuffer);
-
-            //Cpu Job system allocations
+            //CPU Job system allocations
             nativeVoxels = new NativeArray<Voxel>(resolution * resolution * resolution, Allocator.Persistent);
             mcTriangles = new NativeList<MeshTriangle>((resolution - 3) * (resolution - 3) * (resolution - 3) * 5 + (6 * resolution * resolution * 2), Allocator.Persistent);
             vertices = new NativeList<float3>(mcTriangles.Capacity * 3, Allocator.Persistent);
@@ -93,7 +91,7 @@ namespace Jedjoud.VoxelWorld
         public void UpdateChunkManager()
         {
             //Some temp stuff
-            generating = chunkUpdateRequests.Count > 0 || voxelWorld.octreeManager.toAdd.Count > 0 || voxelWorld.octreeManager.toRemove.Count > 0 || voxelWorld.chunkManager.chunksUpdating.Count > 0;
+            generating = chunkUpdateRequests.Count > 0 || voxelWorld.octreeManager.toAdd.Count > 0 || voxelWorld.octreeManager.toRemove.Count > 0 || chunksUpdating.Count > 0;
 
             //Generate a single mesh
             StartChunkGeneration();
@@ -307,7 +305,7 @@ namespace Jedjoud.VoxelWorld
         /// <summary>
         /// Release all the native containers and the GPU buffer
         /// </summary>
-        public void OnDestroy()
+        public override void Release()
         {
             vertexMergingHandle.Complete();
             voxelsBuffer.Release();
